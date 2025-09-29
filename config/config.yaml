@@ -1,0 +1,8 @@
+keys:
+  - demo_video
+  - demo_image
+
+preprocess:
+  video_extraction:
+    fps: 25
+    quality: 1
