@@ -1,7 +1,7 @@
 keys:
   - demo_image
   - demo_video
-  - demo_videogen
+  - demo_genvideo
 
 # global settings, can be overridden by local settings
 global:
@@ -14,10 +14,18 @@ global:
 
 # local settings for each key
 local:
-  demo_video: # key name
+  # key name
+  demo_video:
     preprocess: # stage
       resize: 0.5
-  demo_videogen: # key name
+  
+  demo_genvideo:
     preprocess: # stage
       resize: 1.0
-  
+      # override with GT camera info
+      fx: 611.23
+      fy: 610.758
+      cx: 429.539
+      cy: 241.204
+      depth_scale: 0.0010000000474974513
+      depth_max: 1.6 # this is to clip the real depth for removing outliers

@@ -131,7 +131,9 @@ def run_megasam(video_name: str, key_cfgs: dict):
         depths=recon_npz["depths"], # [N, H, W], float32
         intrinsics=recon_npz["intrinsic"], # [3, 3], float32
         extrinsics=recon_npz["cam_c2w"], # [N, 4, 4], float32 camera to world transform
-        n_frames=recon_npz["images"].shape[0] # N
+        n_frames=recon_npz["images"].shape[0], # N
+        height=recon_npz["images"].shape[1],
+        width=recon_npz["images"].shape[2]
     )
 
     print(f"[Visualization] Saving dynamic PCD HTML")
@@ -174,7 +176,9 @@ def run_moge(key_name: str, key_cfgs: dict):
             depths=depth[np.newaxis, ...], # [1, H, W]
             intrinsics=intrinsics, # [3, 3]
             extrinsics=np.eye(4, dtype=np.float32)[np.newaxis, ...], # [1, 4, 4] camera to world transform
-            n_frames=1
+            n_frames=1,
+            height=images.shape[1],
+            width=images.shape[2]
         )
     print(f"[Visualization] Saving dynamic PCD HTML")
     from utils.viz_dynamic_pcd import save_dynamic_pcd

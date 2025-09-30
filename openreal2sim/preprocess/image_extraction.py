@@ -123,8 +123,10 @@ def run_collect_info(key_name: str):
     
     np.savez(
         output_path,
-        n_frames=n_frames,
         images=frames, # [N, H, W, 3] uint8 array
+        n_frames=n_frames,
+        height=frames.shape[1],
+        width=frames.shape[2]
     )
     print(f"[Info] Wrote geometry information to: {output_path}")
 

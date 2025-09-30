@@ -1,26 +1,32 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Postprocess an existing sgd_cvd_hr.npz:
-1) Resize all images/depths to the original first-frame RGB size.
-2) (Optional) MoGe refinement per frame: run MoGe on resized images and align each to resized npz depths.
-3) Compute a global (a,b) on frame-0 (using the refined depths if enabled) via robust IRLS to GT depth,
-   then apply the same (a,b) to ALL frames.
-4) Save resized JPGs to outputs/{key}/resized_images/{idx:06d}.jpg
-   and overwrite sgd_cvd_hr.npz with:
-      images (uint8, N,H,W,3), depths (float16, N,H,W),
-      intrinsic K (3x3 from config), cam_c2w (identity, N,4,4).
+If we have ground truth depth information, e.g. from an RGBD sensor, use this script to calibrate the predicted depth to real-world scale.
+Inputs:
+    - outputs/{key_name}/geometry/geometry.npz (predicted frames, depths, and camera infos)
+    - ground truth information:
+        - data/{key_name}_depth.png (first frame depth)
+        - fx, fy, cx, cy, depth_scale in config/config.yaml
+Outputs:
+    - outputs/{key_name}/geometry/geometry.npz (refined frames, depths, and camera infos)
+Notes:
+    - for a single image, calibrate the predicted depth to real-world scale with the provided ground truth depth (data/{key_name}_depth.png)
+    - for multiple frames, calibrate the predicted depth to real-world scale with the provided ground truth depth (data/{key_name}_depth.png) on the first frame, 
+        and apply the same scale and shift to all frames
+    - optionally, refine the predicted depth (Unidepth+DepthAnything) with monocular depth prediction (MoGe-2) before calibration
+    - optionally, replace the camera intrinsics in geometry.npz with the one from config.yaml
 """
+
 
 from pathlib import Path
 from typing import Tuple, List
 import numpy as np
 import cv2
 import yaml
-
-# NEW: MoGe imports
 import torch
 from moge.model.v2 import MoGeModel
+
+from utils.compose_config import compose_configs
 
 # --------------------- paths / config ---------------------
 base_dir = Path.cwd()
@@ -71,7 +77,7 @@ def robust_scale_shift_align(
 
     return float(a), float(b)
 
-def export_frame0_pointcloud_o3d(
+def export_depth_alignment_pointcloud(
     img_color_ref: np.ndarray,
     depth_ref_m: np.ndarray,
     depth_aligned0_m: np.ndarray,
@@ -79,9 +85,8 @@ def export_frame0_pointcloud_o3d(
     out_dir: Path,
 ):
     """
-    Export two PLYs for frame-0 using the ALIGNED predicted depth:
-      1) depth_predict.ply  : aligned predicted depth colored by RGB
-      2) depth_aligned.ply  : fused (GT colored + aligned predicted in blue)
+    Export PLYs for frame-0 using the ALIGNED predicted depth:
+    - depth_aligned.ply: fused (GT colored + aligned predicted in blue)
     """
     import open3d as o3d
     assert img_color_ref.ndim == 3 and img_color_ref.shape[2] == 3
@@ -113,14 +118,14 @@ def export_frame0_pointcloud_o3d(
 
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # (1) Aligned predicted only
+    # visualize point cloud from predicted depth
     pts_pred, col_pred = depth_to_xyz_colors(depth_aligned0_m, img_color_ref, None)
     pcd_pred = o3d.geometry.PointCloud()
     pcd_pred.points = o3d.utility.Vector3dVector(pts_pred.astype(np.float32))
     pcd_pred.colors = o3d.utility.Vector3dVector(col_pred.astype(np.float32))
     o3d.io.write_point_cloud(str(out_dir / "depth_predict.ply"), pcd_pred)
 
-    # (2) Fused: GT + aligned predicted in blue
+    # Fused: GT + aligned predicted in blue
     pts_rs, col_rs = depth_to_xyz_colors(depth_ref_m, img_color_ref, None)
     pts_al, col_al = depth_to_xyz_colors(depth_aligned0_m, None, (0, 0, 255))
     pts_all = np.concatenate([pts_rs, pts_al], axis=0).astype(np.float32)
@@ -145,15 +150,6 @@ def resize_depths_to_size(depths: np.ndarray, target_h: int, target_w: int) -> n
         out.append(cv2.resize(d.astype(np.float32), (target_w, target_h), interpolation=cv2.INTER_LINEAR))
     return np.stack(out, axis=0).astype(np.float32)
 
-def save_jpegs(images_rgb: np.ndarray, out_dir: Path) -> None:
-    """Save images as {idx:06d}.jpg in BGR order for OpenCV."""
-    out_dir.mkdir(parents=True, exist_ok=True)
-    N = images_rgb.shape[0]
-    for idx in range(N):
-        path = out_dir / f"{idx:06d}.jpg"
-        bgr = cv2.cvtColor(images_rgb[idx], cv2.COLOR_RGB2BGR)
-        cv2.imwrite(str(path), bgr)
-
 def filter_depths(depths: np.ndarray, min_val: float = None, max_val: float = None) -> np.ndarray:
     """Set the pixels outside [min_val, max_val] in the limits"""
     if min_val is not None:
@@ -161,18 +157,6 @@ def filter_depths(depths: np.ndarray, min_val: float = None, max_val: float = No
     if max_val is not None:
         depths[depths > max_val] = max_val
     return depths.astype(np.float32)
-
-def overwrite_npz(npz_path: Path, images: np.ndarray, depths: np.ndarray, K: np.ndarray) -> None:
-    """Write images/depths/K and identity poses to sgd_cvd_hr.npz (overwrite)."""
-    N = images.shape[0]
-    cam_c2w = np.repeat(np.eye(4, dtype=np.float32)[None, ...], repeats=N, axis=0)
-    np.savez(
-        str(npz_path),
-        images=images.astype(np.uint8),
-        depths=depths.astype(np.float16),
-        intrinsic=K.astype(np.float32),
-        cam_c2w=cam_c2w.astype(np.float32),
-    )
 
 def run_moge_depth(img_rgb_u8: np.ndarray, device: torch.device, model: MoGeModel) -> np.ndarray:
     """
@@ -209,10 +193,10 @@ def maybe_refine_depths_with_mono(imgs_resized: np.ndarray, depths_resized: np.n
         # Align MoGe to npz depth of the same frame
         a_t, b_t = robust_scale_shift_align(d_moge, depths_resized[t], ones, iters=5, huber_delta=0.02)
         refined.append((a_t * d_moge + b_t).astype(np.float32))
-
+        print(f"[Info] moge aligned coefficients: a={a_t:.6f}, b={b_t:.6f}")
     return np.stack(refined, axis=0).astype(np.float32)
 
-def process_key(key: str, K: np.ndarray, depth_scale: float, refine: bool) -> None:
+def process_key(key: str, key_cfgs: dict) -> None:
     """
     For a given key:
       - Load original first-frame RGB/Depth to get target size & GT depth (meters)
@@ -222,86 +206,111 @@ def process_key(key: str, K: np.ndarray, depth_scale: float, refine: bool) -> No
       - Compute global (a,b) on frame-0 (using refined stack if enabled) via IRLS to GT
       - Apply (a,b) to ALL frames, clip, save JPGs, overwrite npz, export PLYs, export HTML
     """
-    print(f"[Config] Processing key: {key}")
+    print(f"[Info] Processing key: {key}")
 
     # Paths
-    recon_dir = base_dir / "outputs" / key / "geometry" / "reconstruction"
-    npz_path = recon_dir / "sgd_cvd_hr.npz"
-    out_jpg_dir = base_dir / "outputs" / key / "resized_images"
-    img0_path = base_dir / "data" / f"{key}.png"
+    recon_dir = base_dir / "outputs" / key / "geometry"
+    npz_path = recon_dir / "geometry.npz"
     depth0_path = base_dir / "data" / f"{key}_depth.png"
 
-    # Load target RGB and GT depth (meters)
-    img0_rgb = cv2.cvtColor(cv2.imread(str(img0_path), cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
-    tgt_H, tgt_W = img0_rgb.shape[:2]
-    depth0_raw = cv2.imread(str(depth0_path), cv2.IMREAD_UNCHANGED)
-    depth0_m = depth0_raw.astype(np.float32) * float(depth_scale)
+    if not depth0_path.is_file():
+        print(f"[Warning] No GT depth found for {key} at {depth0_path}, skipping...")
+        return
 
-    # depth0_m = filter_depths(depth0_m, max_val=1.6)  # clip the real depth for better alignment
+    print(f"[Info] Loading GT depth from: {depth0_path}")
+    depth0_raw = cv2.imread(str(depth0_path), cv2.IMREAD_UNCHANGED)
+    tgt_H, tgt_W = depth0_raw.shape[0], depth0_raw.shape[1]
+    
+    depth_scale = key_cfgs.get("depth_scale")
+    assert depth_scale is not None, \
+        f"Please provide depth_scale for the GT depth image in config.yaml for {key}"
+    depth0_m = depth0_raw.astype(np.float32) * float(depth_scale)
+    # clip the real depth for outlier removal
+    depth0_m = filter_depths(depth0_m, min_val=key_cfgs.get("depth_min"), max_val=key_cfgs.get("depth_max"))
 
     # Load npz
     data = np.load(str(npz_path))
     imgs_npz = data["images"]     # (N,h,w,3) uint8
     depths_npz = data["depths"]   # (N,h,w) float16/float32
+    K = data["intrinsics"]         # (3,3) float32
     N = imgs_npz.shape[0]
+    src_H, src_W = imgs_npz.shape[1], imgs_npz.shape[2]
 
     # Resize
+    # Note: we resize npz to the GT depth size, considering we may need the **paired** camera intrinsics afterwards
     imgs_resized = resize_images_to_size(imgs_npz, tgt_H, tgt_W)         # uint8
     depths_resized = resize_depths_to_size(depths_npz, tgt_H, tgt_W)     # float32
+    K = np.array(
+        [[K[0, 0] * tgt_W / src_W, 0.0, K[0, 2] * tgt_W / src_W],
+         [0.0, K[1, 1] * tgt_H / src_H, K[1, 2] * tgt_H / src_H],
+         [0.0, 0.0, 1.0]],
+        dtype=np.float32,
+    )
 
     # Optional: MoGe refinement (per-frame align MoGe -> resized npz)
-    depths_for_alignment = maybe_refine_depths_with_mono(imgs_resized, depths_resized, refine)
+    # This is adopted because the predicted depths (Unidepth/DepthAnything) from megasam may be bad
+    # This is only applied to multiple frames, since for a single image, we already use Moge for depth prediction
+    depth_refinement = key_cfgs.get("depth_refinement", False)
+    if N > 1:
+        depths_for_alignment = maybe_refine_depths_with_mono(imgs_resized, depths_resized, depth_refinement)
+    else:
+        depths_for_alignment = depths_resized
 
     # Global robust alignment on frame-0 (mask = all-ones), using depths_for_alignment
     pred0 = depths_for_alignment[0]
     gt0 = depth0_m
-    ones_mask = np.ones_like(pred0, dtype=np.uint8)
+    ones_mask = np.ones_like(pred0, dtype=np.uint8) # masked alignment is an un-implemented feature
     a, b = robust_scale_shift_align(pred0, gt0, ones_mask, iters=5, huber_delta=0.02)
-    print(f"[{key}] global IRLS params from frame-0: a={a:.6f}, b={b:.6f} (refine={refine})")
+    print(f"[Info] {key}: global IRLS params from frame-0: a={a:.6f}, b={b:.6f} (refine={depth_refinement})")
 
     # Apply to all frames, clip and cast
     depths_aligned = a * depths_for_alignment + b
     depths_aligned = np.clip(depths_aligned, 1e-3, 1e2).astype(np.float16)
 
-    # Save JPGs and overwrite NPZ
-    save_jpegs(imgs_resized, out_jpg_dir)
-    overwrite_npz(npz_path, imgs_resized, depths_aligned, K)
+    # overwrite geometry.npz
+    fx, fy, cx, cy = key_cfgs.get("fx"), key_cfgs.get("fy"), key_cfgs.get("cx"), key_cfgs.get("cy")
+    if fx is not None and fy is not None and cx is not None and cy is not None:
+        print(f"[Info] Overwriting {key} intrinsics with the one from config.yaml")
+        print(f"[Info] fx={fx}, fy={fy}, cx={cx}, cy={cy}")
+        K = np.array(
+            [[float(fx), 0.0, float(cx)],
+             [0.0, float(fy), float(cy)],
+             [0.0, 0.0, 1.0]],
+            dtype=np.float32,
+        )
 
-    # Export PLYs (depth_predict == aligned predicted depth)
-    export_frame0_pointcloud_o3d(
-        img0_rgb,
+    N = imgs_resized.shape[0]
+    np.savez(
+        str(npz_path),
+        images=imgs_resized, # [N, H, W, 3], uint8
+        depths=depths_aligned, # [N, H, W]
+        intrinsics=K, # [3, 3]
+        extrinsics=data["extrinsics"], # [N, 4, 4] camera to world transform
+        n_frames=N,
+        height=imgs_resized.shape[1],
+        width=imgs_resized.shape[2]
+    )
+
+    # Export PLYs for rebugging depth alignment results
+    export_depth_alignment_pointcloud(
+        imgs_resized[0],  # first frame RGB (uint8 HxWx3)
         depth0_m,
-        (a * pred0 + b).astype(np.float32),  # already aligned predicted depth (frame-0)
+        depths_aligned[0],  # already aligned predicted depth (frame-0)
         K,
         recon_dir,
     )
 
     # Optional HTML (keep your current import path)
-    print(f"[Visualization] Saving multi-step PCD HTML to: {recon_dir / 'multistep_pcd.html'}")
-    from utils.viz_dynamic_pcd import save_multistep_pcd_html
-    save_multistep_pcd_html(key, max_points=5000)
-
-    print(f"[{key}] resized JPGs -> {out_jpg_dir}")
-    print(f"[{key}] overwritten NPZ -> {npz_path}")
+    print(f"[Visualization] Saving aligned multi-step PCD HTML to: {recon_dir / 'multistep_pcd.html'}")
+    from utils.viz_dynamic_pcd import save_dynamic_pcd
+    save_dynamic_pcd(key, max_points=5000 if N>1 else None)
+    return
 
 # --------------------- main: read YAML and run ---------------------
 if __name__ == "__main__":
     cfg_path = base_dir / "config" / "config.yaml"
     cfg = yaml.safe_load(cfg_path.open("r"))
     keys = cfg["keys"]
-    refine = cfg.get("depth_refinement", False)
-
     for key in keys:
-        fx = float(cfg["specs"][key]["intrinsics"]["fx"])
-        fy = float(cfg["specs"][key]["intrinsics"]["fy"])
-        cx = float(cfg["specs"][key]["intrinsics"]["cx"])
-        cy = float(cfg["specs"][key]["intrinsics"]["cy"])
-        depth_scale = float(cfg["specs"][key]["intrinsics"]["depth_scale"])
-
-        K = np.array(
-            [[fx, 0.0, cx],
-            [0.0, fy, cy],
-            [0.0, 0.0, 1.0]],
-        dtype=np.float32)
-
-        process_key(key, K, depth_scale, refine)
+        key_cfgs = compose_configs(key, cfg)
+        process_key(key, key_cfgs)

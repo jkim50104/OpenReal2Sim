@@ -4,7 +4,14 @@ default_config = {
     "quality": 1,
     "resize": 1,
     "depth_refinement": True,
-    "gpu": "0"
+    "gpu": "0",
+    "fx": None,
+    "fy": None,
+    "cx": None,
+    "cy": None,
+    "depth_scale": None,
+    "depth_min": None,
+    "depth_max": None,
 }
 
 def compose_configs(key_name: str, config: dict) -> dict:
