@@ -11,6 +11,10 @@ global:
     resize: 1
     gpu: "0" 
     depth_refinement: true
+  
+  reconstruction:
+    gpu: "0" 
+
 
 # local settings for each key
 local:

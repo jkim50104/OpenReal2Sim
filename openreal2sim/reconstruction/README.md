@@ -40,26 +40,9 @@ pkl file structure:
 }
 ```
 
-We also save intermediate segmentation results in `outputs/{key_name}/annotated_images` for debugging purpose.
-
 ## How to Use
 
 Make sure you have `scene.pkl` (from preprocess steps) in the `outputs/{key_name}/scene` folder.
-
-Then, make sure you have correct configurations for each `key_name` in `config/config.yaml`:
-```
-keys:
-  - key_name
-
-global:
-    ...
-
-local:
-  key_name:
-    reconstruction:
-      ...
-```
-
 
 If everything is ready, run the all-in-one script:
 ```
@@ -68,7 +51,7 @@ bash scripts/running/reconstruction.sh
 
 Or run per-step following the instructions below.
 
-Step-1: object segmentation.
+**Step-1: object segmentation**
 
 Launch the interactive segmentation tool:
 ```
@@ -94,3 +77,5 @@ pkl file structure:
     }
 }
 ```
+
+For debugging purpose, we also save the annotated images in `outputs/{key_name}/annotated_images`.
