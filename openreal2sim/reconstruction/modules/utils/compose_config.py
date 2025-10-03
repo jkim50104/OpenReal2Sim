@@ -7,6 +7,7 @@ default_config = {
     "bg_mesh_simplify_step": 1,  # 1 means no background mesh simplification
     "bg_mesh_target_faces": 0,  # 0 means no background mesh simplification
     "bg_mesh_thickness": 0.1,  # in meters, added thickness of the background mesh
+    "fast_scene_construction": False,  # whether to use fast (but inaccurate) point cloud registration
 }
 
 def compose_configs(key_name: str, config: dict) -> dict:

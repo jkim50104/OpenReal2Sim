@@ -15,7 +15,7 @@ Note:
                 "oid": # object_id,
                 "name": # object name,
                 "glb": # object glb path,
-                "mask": # object mask path,
+                "mask": # object mask [H, W] boolean array,
             }
 """
 
@@ -23,10 +23,6 @@ import os, pickle, json, random, sys
 from pathlib import Path
 import numpy as np
 from PIL import Image
-import cv2
-import imageio
-import trimesh
-import open3d as o3d
 import yaml
 
 base_dir   = Path.cwd()
@@ -168,7 +164,7 @@ def object_mesh_generation(keys, key_scene_dicts, key_cfgs):
                 "oid": item['oid'],
                 "name": name,
                 "glb": str(out_dir / f"{stem}.glb"),
-                "mask": str(mask_png),
+                "mask": mask,
             })
 
             print(f"[Info] [{key}] Hunyuan3D finished for {stem}")

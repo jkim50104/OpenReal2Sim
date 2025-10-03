@@ -10,7 +10,13 @@ Outputs:
     - outputs/{key_name}/recon/ground_normal.ply # estimated ground plane and normal direction (debug purpose)
     - outputs/{key_name}/recon/mesh_thickness_debug.ply # background mesh and pointmap (debug purpose)
 Note:
-    - added keys in "recon": "bg_mesh_path", "normal"
+    - added keys in "recon": "info", "normal"
+    - the "info" key contains lightweight scenario info that can be exported to json
+        "info": {
+            "background": {
+                "original": # original background mesh path,
+            }
+        }
 """
 
 from pathlib import Path
@@ -244,7 +250,10 @@ def background_mesh_generation(keys, key_scene_dicts, key_cfgs):
         print(f"[Info] [{key}] background textured mesh saved: {mesh_path}")
 
         # update scene_dict
-        scene_dict["recon"]["bg_mesh_path"] = str(mesh_path)
+        scene_dict["info"] = scene_dict.get("info", {})
+        scene_dict["info"]["background"] = {
+            "original": str(mesh_path),
+        }
         scene_dict["recon"]["normal"] = normal.astype(np.float32) # store normal direction
         key_scene_dicts[key] = scene_dict
         with open(base_dir / f'outputs/{key}/scene/scene.pkl', 'wb') as f:

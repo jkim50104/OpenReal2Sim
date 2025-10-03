@@ -202,8 +202,8 @@ def background_point_inpainting(keys, key_scene_dicts, key_cfgs):
         fg_pts = depth_to_points(depth0, K)
         fg_colors = fg_img.reshape(-1,3) / 255.
         fg_color_pts = np.concatenate([fg_pts.reshape(H,W,3), fg_colors.reshape(H,W,3)], -1)
-        scene_dict["recon"]["bg_pts"] = bg_color_pts.astype(np.float32)
-        scene_dict["recon"]["fg_pts"] = fg_color_pts.astype(np.float32)
+        scene_dict["recon"]["bg_pts"] = bg_color_pts.astype(np.float32) # (H, W, 6) xyzrgb rgb in [0,1]
+        scene_dict["recon"]["fg_pts"] = fg_color_pts.astype(np.float32) # (H, W, 6) xyzrgb rgb in [0,1]
         key_scene_dicts[key] = scene_dict
         with open(base_dir / f'outputs/{key}/scene/scene.pkl', 'wb') as f:
             pickle.dump(scene_dict, f)
