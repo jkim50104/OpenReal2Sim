@@ -166,6 +166,7 @@ def visualize_mesh_thickness_with_pointmap(scene_dir: Path,
 
 # ──────────────────── core ─────────────────────
 def background_mesh_generation(keys, key_scene_dicts, key_cfgs):
+    base_dir = Path.cwd()
     for key in keys:
         scene_dict = key_scene_dicts[key]
         cfg = key_cfgs[key]

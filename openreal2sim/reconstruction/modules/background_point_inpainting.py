@@ -212,6 +212,7 @@ def background_point_inpainting(keys, key_scene_dicts, key_cfgs):
         export_cloud(fg_pts, fg_colors, recon_dir / "foreground_points.ply")
         export_cloud(bg_pts, bg_colors, recon_dir / "background_points.ply")
         print(f"[Info] [{key}] geometry inpainting done.\n")
+    return key_scene_dicts
 
 if __name__ == "__main__":
     cfg_path = base_dir / "config" / "config.yaml"

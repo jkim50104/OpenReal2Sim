@@ -46,7 +46,7 @@ def background_pixel_inpainting(keys, key_scene_dicts, key_cfgs):
     # Set up ObjectClear pipeline once
     torch_dtype = torch.float16 if USE_FP16 else torch.float32
     variant = "fp16" if USE_FP16 else None
-    gpu_id = key_cfgs[0]["gpu"] # it has to be running on the same GPU
+    gpu_id = key_cfgs[keys[0]]["gpu"] # it has to be running on the same GPU
     device = torch.device(f'cuda:{gpu_id}' if torch.cuda.is_available() else 'cpu')
     generator = torch.Generator(device=device).manual_seed(SEED)
     pipe = ObjectClearPipeline.from_pretrained_with_custom_modules(
