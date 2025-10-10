@@ -96,59 +96,6 @@ def convert_glb_to_obj_temp(glb_path: str) -> Tuple[str, Optional[str]]:
     logging.info(f"[convert_glb_to_obj_temp] export to OBJ: {obj_path}")
     return str(obj_path), tmpdir
 
-# def export_debug_track_as_video(
-#     track_vis_dir: Path,
-#     output_mp4_path: Path,
-#     fps: int = 20
-# ) -> None:
-#     """
-#     Stitch per-frame debug images under `track_vis_dir` into an MP4 video.
-
-#     - Supports both .jpg and .png files named as zero-padded indices (e.g., 000000.jpg).
-#     - Writes the video to `output_mp4_path` (parents are created if missing).
-#     - If no images are found, it logs and returns without raising.
-
-#     Args:
-#         track_vis_dir (Path): Directory containing per-frame debug images.
-#         output_mp4_path (Path): Target MP4 path to write.
-#         fps (int): Frames per second for the output video.
-#     """
-#     try:
-#         jpg_list = sorted(track_vis_dir.glob("*.jpg"))
-#         png_list = sorted(track_vis_dir.glob("*.png"))
-#         img_files = jpg_list if len(jpg_list) > 0 else png_list
-
-#         if len(img_files) == 0:
-#             logging.info(f"[export_debug_track_as_video] No images found in: {track_vis_dir}")
-#             return
-
-#         # Read first frame to get frame size (W, H). cv2 reads in BGR, which suits VideoWriter.
-#         first_img = cv2.imread(str(img_files[0]), cv2.IMREAD_COLOR)
-#         if first_img is None:
-#             logging.warning(f"[export_debug_track_as_video] Failed to read first image: {img_files[0]}")
-#             return
-#         frame_height, frame_width = first_img.shape[:2]
-
-#         # Prepare writer (mp4v is widely supported)
-#         output_mp4_path.parent.mkdir(parents=True, exist_ok=True)
-#         fourcc = cv2.VideoWriter_fourcc(*'avc1')
-#         writer = cv2.VideoWriter(str(output_mp4_path), fourcc, float(fps), (frame_width, frame_height))
-
-#         # Sequentially write all frames
-#         for img_path in img_files:
-#             frame_bgr = cv2.imread(str(img_path), cv2.IMREAD_COLOR)
-#             if frame_bgr is None:
-#                 logging.warning(f"[export_debug_track_as_video] Skip unreadable image: {img_path}")
-#                 continue
-#             # If sizes mismatch for any reason, resize to (W, H) to avoid writer failure.
-#             if (frame_bgr.shape[1] != frame_width) or (frame_bgr.shape[0] != frame_height):
-#                 frame_bgr = cv2.resize(frame_bgr, (frame_width, frame_height), interpolation=cv2.INTER_AREA)
-#             writer.write(frame_bgr)
-
-#         writer.release()
-#         logging.info(f"[export_debug_track_as_video] Wrote video: {output_mp4_path} ({len(img_files)} frames @ {fps} FPS)")
-#     except Exception as e:
-#         logging.warning(f"[export_debug_track_as_video] Failed to export video due to: {e}")
 
 def export_debug_track_as_video(
     track_vis_dir: Path,
