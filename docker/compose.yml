@@ -38,11 +38,11 @@ services:
     volumes:
       - ../:/app
       - /tmp/.X11-unix:/tmp/.X11-unix:rw        # forward X11 socket
-      - ${XAUTHORITY:-$HOME/.Xauthority}:/root/.Xauthority:ro  # X auth cookie
+      - ${XAUTHORITY:-$HOME/.Xauthority}:/home/isaac/.Xauthority:ro  # X auth cookie
       - /dev:/dev                                # add: expose input/gpu devices if needed
     environment:
       - DISPLAY=${DISPLAY}            # add: pass host DISPLAY
-      - XAUTHORITY=/home/${USER}/.Xauthority  # add: where the cookie is mounted in container
+      - XAUTHORITY=/home/isaac/.Xauthority  # add: where the cookie is mounted in container
       - QT_X11_NO_MITSHM=1            # add: avoid MIT-SHM issues for GUI apps
       - NVIDIA_VISIBLE_DEVICES=all    # add: be explicit
       - NVIDIA_DRIVER_CAPABILITIES=all # add: include graphics/display
