@@ -21,7 +21,7 @@ docker compose -p "$USER" -f docker/compose.yml run --rm openreal2sim
 
 **Inside the docker container**, run the following script to download pretrained checkpoints and compile c++/cuda extensions:
 ```
-bash scripts/installation/install.sh
+python scripts/installation/install.py
 ```
 
 **Tips if you are using VSCode**:
