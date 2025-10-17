@@ -281,7 +281,15 @@ def cb_prop():
     return "✅ Propagation finished and saved", render(cur_idx)
 
 # ────────── GUI ──────────
-with gr.Blocks(title="Grounded-SAM-2 Annotator") as demo:
+css_prevent_image_drag = """
+#sam-image-box img {
+    user-drag: none;
+    -webkit-user-drag: none;
+}
+"""
+
+
+with gr.Blocks(title="Grounded-SAM-2 Annotator", css=css_prevent_image_drag) as demo:
     gr.Markdown("1️⃣ LOAD → 2️⃣ DETECT/click→CONFIRM → 3️⃣ SAVE / DELETE / PROPAGATE")
 
     key_in, load_btn = gr.Text(label="Output-key"), gr.Button("LOAD")
