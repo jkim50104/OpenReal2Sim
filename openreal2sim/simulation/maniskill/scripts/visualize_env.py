@@ -21,7 +21,8 @@ import sys
 # Make the project root directory available to the python path
 project_root = Path(__file__).resolve().parents[3]
 sys.path.append(str(project_root))
-from openreal2sim.simulation.maniskill.env import OpenReal2SimEnv  # noqa
+print(project_root)
+from simulation.maniskill.envs import OpenReal2SimEnv  # noqa
 
 
 def visualize_random_actions(scene_path: str, num_steps: int = 1000):
@@ -134,7 +135,7 @@ def visualize_static(scene_path: str):
 
 def main():
     project_root = Path(__file__).resolve().parents[3]
-    default_scene_path = project_root / "outputs/demo_image/scene/scene.json"
+    default_scene_path = project_root / "../outputs/demo_image/scene/scene.json"
     parser = argparse.ArgumentParser(
         description="Visualize OpenReal2Sim ManiSkill environment"
     )

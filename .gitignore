@@ -227,3 +227,6 @@ __marimo__/
 *.arj
 
 # Maniskill
+openreal2sim/simulation/maniskill/demos
+openreal2sim/simulation/maniskill/*.md
+openreal2sim/simulation/maniskill/third_party
