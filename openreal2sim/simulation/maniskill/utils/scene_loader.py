@@ -35,7 +35,7 @@ class ObjectConfig:
     center: list  # [x, y, z]
     bbox_min: list  # [x, y, z]
     bbox_max: list  # [x, y, z]
-    grasp_path: Optional[str] = None
+    grasps: Optional[str] = None
     trajectory_path: Optional[str] = None
 
 
@@ -107,6 +107,7 @@ def load_scene_config(scene_json_path: str | Path) -> SceneConfig:
         if mesh_path and mesh_path.startswith("/app/"):
             mesh_path = mesh_path.replace("/app/", str(output_path) + "/")
 
+        grasp_path = obj_data.get("grasps").replace("/app/", str(output_path) + "/")
         objects[obj_id] = ObjectConfig(
             oid=obj_data["oid"],
             name=obj_data["name"],
@@ -114,7 +115,7 @@ def load_scene_config(scene_json_path: str | Path) -> SceneConfig:
             center=obj_data.get("object_center", [0, 0, 0]),
             bbox_min=obj_data.get("object_min", [0, 0, 0]),
             bbox_max=obj_data.get("object_max", [0, 0, 0]),
-            grasp_path=obj_data.get("grasps"),
+            grasps=grasp_path,
             trajectory_path=obj_data.get("hybrid_trajs")
             or obj_data.get("simple_trajs"),
         )
