@@ -2,6 +2,14 @@
 
 ## Installation
 
+**Pull the pre-built docker image**
+
+If you want to use a pre-built image from Docker Hub, you can pull it directly:
+   ```bash
+   docker pull ghcr.io/pointscoder/isaaclab:dev
+   docker tag ghcr.io/pointscoder/isaaclab:dev isaaclab:dev
+   ```
+
 **On the host machine and before entering the container**, run
 ```
 xhost +local:

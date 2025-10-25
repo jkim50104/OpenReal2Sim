@@ -68,9 +68,28 @@ Every time you want to run a script inside the repo, follow these steps:
    HOST_UID=$(id -u) HOST_GID=$(id -g) docker compose -p "$USER" -f docker/compose.yml run openreal2sim
    ```
 
+**Inside the docker container**, run the following script to download pretrained checkpoints and compile c++/cuda extensions:
+```
+bash scripts/installation/install.sh
+```
+
+**Note:** on the previous script sometimes gdwon fails download the files. Alternatively the following python script can be used: 
+
+```
+python scripts/installation/install.py
+```
+
 **Execute a script inside the container**
    
    Inside the container’s terminal and from the repository root:
    ```bash
    python <path_to_script>.py
    ```
+   
+**Tips if you are using VSCode**:
+
+1. Install the [Container Tools](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-containers) extension for setting up the docker container as a remote development environment.
+
+2. Install the [vscode-3d-preview](https://marketplace.visualstudio.com/items?itemName=tatsy.vscode-3d-preview) extension for visualizing 3D point clouds directly in VSCode.
+
+3. Install the [glTF Model Viewer](https://marketplace.visualstudio.com/items?itemName=cloudedcat.vscode-model-viewer) extension for visualizing textured meshes (.glb files) directly in VSCode.
