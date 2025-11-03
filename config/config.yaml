@@ -48,6 +48,6 @@ local:
         - [ -0.01947593, -0.02845325, -0.99940537,  0.5708384]
         - [ 0.,          0.,          0.,          1.,       ]
       
-      goal_offset: 0.1
+      goal_offset: 0.15
       # grasp_idx: 3
-      traj_key: "fdpose_trajs"
+      traj_key: "fdpose_trajs" # "fdpose_trajs"
