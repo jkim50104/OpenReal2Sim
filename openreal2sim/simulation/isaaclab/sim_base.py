@@ -457,7 +457,7 @@ class BaseSimulator:
         
         SIM_VIDEO_PATH = demo_path / "sim_video.mp4"
         MASK_VIDEO_PATH = demo_path / "mask_video.mp4"
-        REAL_BACKGROUND_PATH = base_path / "reconstruction" / "background.jpg"
+        REAL_BACKGROUND_PATH = base_path / "simulation" / "background.jpg"
         OUTPUT_PATH = demo_path / "real_video.mp4"
         
         # Check if required files exist
