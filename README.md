@@ -5,7 +5,7 @@ A toolbox for real-to-sim reconstruction and robotic simulation
 
 - [x] Real-to-sim assets reconstruction from images and (generated) videos
 - [x] IsaacLab support for scenario import, camera setup, and rendering from the same input viewpoint 
-- [x] IsaacLab support for robotic trajectory generation by cross-embodiment transfer from videos
+- [x] Preliminary IsaacLab support for robotic trajectory generation by cross-embodiment transfer from videos
 - [x] Preliminary Maniskills support
 
 ## Installation
@@ -31,6 +31,13 @@ If you find this repository useful in your research, please consider citing:
   author={OpenReal2Sim Development Team},
   year={2025}
 }
+```
+```
+@inproceedings{physworld,
+  title={Robot Learning from a Physical World Model},
+  author = {Mao, Jiageng and He, Sicheng and Wu, Hao-Ning and You, Yang and Sun, Shuyang and Wang, Zhicheng and Bao, Yanan and Chen, Huizhong and Guibas, Leonidas and Guizilini, Vitor and Zhou, Howard and Wang, Yue},
+  year={2025},
+}   
 ```
 ```
 @inproceedings{rola,
