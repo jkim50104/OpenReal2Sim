@@ -1,45 +1,47 @@
 #!/usr/bin/env python3
+"""Simplify GLB/GLTF mesh files using quadric edge collapse decimation."""
 
-import argparse
 from pathlib import Path
 import tempfile
 import pymeshlab
 import trimesh
+import tyro
+from loguru import logger
 
 
-def _simplify_one(
-    in_path: Path,
+def simplify_glb(
+    input_path: Path,
+    output_path: Path,
     target_tris: int,
-    *,
-    min_tris_to_simplify: int = 10_000,
-    min_target_tris: int = 500,
-    smooth_iters: int = 0,
 ) -> None:
-    """Simplify one GLB/GLTF mesh in-place."""
+    """Simplify a GLB/GLTF mesh file.
+    
+    Args:
+        input_path: Input GLB/GLTF file path
+        output_path: Output GLB/GLTF file path
+        target_tris: Target number of triangles
+    """
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_dir = Path(tmpdir)
         tmp_obj = tmp_dir / 'mesh.obj'
 
-        # Load GLB and convert to OBJ
-        scene = trimesh.load(str(in_path), force='scene')
+        logger.info(f"Loading {input_path.name}...")
+        scene = trimesh.load(str(input_path), force='scene')
         scene.export(str(tmp_obj), file_type='obj', include_texture=True)
 
-        # Load into pymeshlab
         ms = pymeshlab.MeshSet()
         ms.load_new_mesh(str(tmp_obj))
         n_tris = ms.current_mesh().face_number()
+        
+        logger.info(f"Original: {n_tris:,} triangles")
 
-        if n_tris < min_tris_to_simplify:
-            print(f"Skip {in_path.name}: {n_tris} tris")
-            return
-
-        tgt = max(min_target_tris, min(int(target_tris), n_tris - 1))
+        tgt = min(int(target_tris), n_tris - 1)
         if tgt >= n_tris:
+            logger.info(f"Target {target_tris:,} >= current {n_tris:,}, copying without simplification")
+            scene.export(str(output_path))
             return
 
-        print(f"Simplify {in_path.name}: {n_tris} -> {tgt} tris")
-
-        # Simplify
+        logger.info(f"Simplifying to {tgt:,} triangles...")
         ms.meshing_decimation_quadric_edge_collapse(
             targetfacenum=tgt,
             preservetopology=True,
@@ -49,62 +51,32 @@ def _simplify_one(
             planarquadric=True,
         )
 
-        if smooth_iters > 0:
-            ms.apply_coord_taubin_smoothing(stepsmoothnum=smooth_iters)
-
-        # Save and convert back
         ms.save_current_mesh(str(tmp_obj))
         simplified_scene = trimesh.load(str(tmp_obj), force='scene')
-        simplified_scene.export(str(in_path))
+        
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        simplified_scene.export(str(output_path))
+        
+        final_tris = ms.current_mesh().face_number()
+        reduction = (1 - final_tris / n_tris) * 100
+        logger.success(f"Saved to {output_path}")
+        logger.info(f"Final: {final_tris:,} triangles ({reduction:.1f}% reduction)")
 
 
-def simplify_dir(
-    root: str,
+def main(
+    input: Path,
+    output: Path,
     target_tris: int,
-    *,
-    exts: str = ".glb,.gltf",
-    recursive: bool = True,
-    min_tris_to_simplify: int = 10_000,
-    min_target_tris: int = 500,
-    smooth_iters: int = 0,
 ) -> None:
-    """Simplify all GLB/GLTF files in a directory in-place."""
-    root_p = Path(root)
-    suffixes = {e.strip().lower() for e in exts.split(",") if e.strip()}
-    it = root_p.rglob("*") if recursive else root_p.glob("*")
-
-    for p in it:
-        if not p.is_file():
-            continue
-        if p.suffix.lower() not in suffixes:
-            continue
-        _simplify_one(
-            p,
-            target_tris,
-            min_tris_to_simplify=min_tris_to_simplify,
-            min_target_tris=min_target_tris,
-            smooth_iters=smooth_iters,
-        )
+    """Simplify a single GLB/GLTF file.
+    
+    Args:
+        input: Input GLB/GLTF file
+        output: Output GLB/GLTF file
+        target_tris: Target number of triangles
+    """
+    simplify_glb(input, output, target_tris)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Simplify GLB/GLTF files in-place")
-    parser.add_argument("root", help="Directory containing GLB/GLTF files")
-    parser.add_argument("target_tris", type=int, help="Target number of triangles")
-    parser.add_argument("--exts", default=".glb,.gltf", help="File extensions (default: .glb,.gltf)")
-    parser.add_argument("--no-recursive", action="store_true", help="Don't search recursively")
-    parser.add_argument("--min-tris-to-simplify", type=int, default=10_000, help="Skip files with fewer triangles")
-    parser.add_argument("--min-target-tris", type=int, default=500, help="Minimum target triangles")
-    parser.add_argument("--smooth-iters", type=int, default=0, help="Smoothing iterations")
-
-    args = parser.parse_args()
-
-    simplify_dir(
-        args.root,
-        args.target_tris,
-        exts=args.exts,
-        recursive=not args.no_recursive,
-        min_tris_to_simplify=args.min_tris_to_simplify,
-        min_target_tris=args.min_target_tris,
-        smooth_iters=args.smooth_iters,
-    )
+    tyro.cli(main)

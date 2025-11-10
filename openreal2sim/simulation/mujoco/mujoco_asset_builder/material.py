@@ -1,8 +1,6 @@
 from dataclasses import dataclass
 from typing import Optional, Sequence
 
-from . import constants
-
 
 @dataclass
 class Material:
@@ -22,7 +20,7 @@ class Material:
         """Build a Material from lines of an MTL file."""
         attrs = {"name": lines[0].split(" ")[1].strip()}
         for line in lines[1:]:
-            for attr in constants.MTL_FIELDS:
+            for attr in ("Ka", "Kd", "Ks", "d", "Tr", "Ns", "map_Kd"):
                 if line.startswith(attr):
                     elems = line.split(" ")[1:]
                     elems = [elem for elem in elems if elem != ""]

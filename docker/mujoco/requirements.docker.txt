@@ -8,3 +8,4 @@ lxml
 coacd
 pymeshlab
 loguru
+transforms3d

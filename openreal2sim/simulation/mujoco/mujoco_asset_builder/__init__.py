@@ -1,4 +1,3 @@
-from . import constants
 from .material import Material
 from .mjcf_builder import MJCFBuilder
 from .processing import (
@@ -8,7 +7,6 @@ from .processing import (
 )
 
 __all__ = [
-    "constants",
     "Material",
     "MJCFBuilder",
     "CoacdParams",

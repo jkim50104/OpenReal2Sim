@@ -9,7 +9,6 @@ import trimesh
 from PIL import Image
 from loguru import logger
 
-from . import constants
 from .material import Material
 from .mjcf_builder import MJCFBuilder
 
@@ -67,11 +66,11 @@ def decompose_convex(obj_file: Path, work_dir: Path, params: CoacdParams) -> Non
     if not parts:
         raise RuntimeError(f"CoACD returned no parts for {obj_file}")
 
-    for stale in work_dir.glob(f"{obj_file.stem}{constants.SUFFIX_COLLISION}*{constants.EXT_OBJ}"):
+    for stale in work_dir.glob(f"{obj_file.stem}_collision_*.obj"):
         stale.unlink()
 
     for i, (vs, fs) in enumerate(parts):
-        submesh_name = work_dir / f"{obj_file.stem}{constants.SUFFIX_COLLISION}{i}{constants.EXT_OBJ}"
+        submesh_name = work_dir / f"{obj_file.stem}_collision_{i}.obj"
         trimesh.Trimesh(vs, fs).export(submesh_name.as_posix())
 
 
@@ -110,7 +109,7 @@ def process_obj_inplace(obj_file: Path, cfg: ProcessingConfig) -> Path:
 
         with open(mtl_filename, "r") as f:
             lines = f.readlines()
-        lines = [line for line in lines if not line.startswith(constants.MTL_COMMENT_CHAR)]
+        lines = [line for line in lines if not line.startswith("#")]
         lines = [line for line in lines if line.strip()]
         lines = [line.strip() for line in lines]
 
@@ -134,10 +133,10 @@ def process_obj_inplace(obj_file: Path, cfg: ProcessingConfig) -> Path:
             dst_filename = work_dir / texture_name
             if dst_filename != src_filename:
                 shutil.copy(src_filename, dst_filename)
-            if texture_path.suffix.lower() in [constants.EXT_JPG, constants.EXT_JPEG]:
+            if texture_path.suffix.lower() in [".jpg", ".jpeg"]:
                 image = Image.open(dst_filename)
                 os.remove(dst_filename)
-                dst_filename = (work_dir / texture_path.stem).with_suffix(constants.EXT_PNG)
+                dst_filename = (work_dir / texture_path.stem).with_suffix(".png")
                 image.save(dst_filename)
                 texture_name = dst_filename.name
                 mtl.map_Kd = texture_name
@@ -150,8 +149,8 @@ def process_obj_inplace(obj_file: Path, cfg: ProcessingConfig) -> Path:
                         parts = line.split()
                         if len(parts) >= 2:
                             texture_path = Path(parts[1])
-                            if texture_path.suffix.lower() in [constants.EXT_JPG, constants.EXT_JPEG]:
-                                new_texture = texture_path.with_suffix(constants.EXT_PNG)
+                            if texture_path.suffix.lower() in [".jpg", ".jpeg"]:
+                                new_texture = texture_path.with_suffix(".png")
                                 line = f"map_Kd {new_texture.name}"
                     f.write(line + "\n")
 
@@ -168,7 +167,7 @@ def process_obj_inplace(obj_file: Path, cfg: ProcessingConfig) -> Path:
     else:
         obj_file.unlink()
         for i, geom in enumerate(mesh.geometry.values()):
-            savename = work_dir / f"{obj_file.stem}_{i}{constants.EXT_OBJ}"
+            savename = work_dir / f"{obj_file.stem}_{i}.obj"
             geom.export(savename.as_posix(), include_texture=True, header=None)
 
     if isinstance(mesh, trimesh.base.Trimesh) and len(mtls) > 1:
@@ -191,7 +190,7 @@ def process_obj_inplace(obj_file: Path, cfg: ProcessingConfig) -> Path:
     for file in [
         x
         for x in work_dir.glob("**/*")
-        if x.is_file() and constants.MATERIAL_PREFIX in x.name and not x.name.endswith(constants.EXT_PNG)
+        if x.is_file() and "material_0" in x.name and not x.name.endswith(".png")
     ]:
         file.unlink()
 
@@ -206,4 +205,4 @@ def process_obj_inplace(obj_file: Path, cfg: ProcessingConfig) -> Path:
     builder.build(add_free_joint=cfg.add_free_joint)
     builder.save_mjcf()
 
-    return work_dir / f"{obj_file.stem}{constants.EXT_XML}"
+    return work_dir / f"{obj_file.stem}.xml"

@@ -69,11 +69,11 @@
         <geom mesh="finger_0" material="off_white" class="visual" />
         <geom mesh="finger_1" material="black" class="visual" />
         <geom mesh="finger_0" class="collision" />
-        <geom class="fingertip_pad_collision_1" />
-        <geom class="fingertip_pad_collision_2" />
-        <geom class="fingertip_pad_collision_3" />
-        <geom class="fingertip_pad_collision_4" />
-        <geom class="fingertip_pad_collision_5" />
+        <geom name="finger1_fingertip_pad_collision_1" class="fingertip_pad_collision_1" />
+        <geom name="finger1_fingertip_pad_collision_2" class="fingertip_pad_collision_2" />
+        <geom name="finger1_fingertip_pad_collision_3" class="fingertip_pad_collision_3" />
+        <geom name="finger1_fingertip_pad_collision_4" class="fingertip_pad_collision_4" />
+        <geom name="finger1_fingertip_pad_collision_5" class="fingertip_pad_collision_5" />
       </body>
       <site name="tcp" pos="0 0 0.15" axisangle="0 0 1 1.57"/>
       <body name="right_finger" pos="0 0 0.0584" quat="0 0 0 1">
@@ -82,11 +82,11 @@
         <geom mesh="finger_0" material="off_white" class="visual"/>
         <geom mesh="finger_1" material="black" class="visual"/>
         <geom mesh="finger_0" class="collision"/>
-        <geom class="fingertip_pad_collision_1"/>
-        <geom class="fingertip_pad_collision_2"/>
-        <geom class="fingertip_pad_collision_3"/>
-        <geom class="fingertip_pad_collision_4"/>
-        <geom class="fingertip_pad_collision_5"/>
+        <geom name="finger2_fingertip_pad_collision_1" class="fingertip_pad_collision_1"/>
+        <geom name="finger2_fingertip_pad_collision_2" class="fingertip_pad_collision_2"/>
+        <geom name="finger2_fingertip_pad_collision_3" class="fingertip_pad_collision_3"/>
+        <geom name="finger2_fingertip_pad_collision_4" class="fingertip_pad_collision_4"/>
+        <geom name="finger2_fingertip_pad_collision_5" class="fingertip_pad_collision_5"/>
       </body>
     </body>
   </worldbody>

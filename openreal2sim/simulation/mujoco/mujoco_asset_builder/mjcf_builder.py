@@ -7,7 +7,6 @@ import trimesh
 from lxml import etree
 from loguru import logger
 
-from . import constants
 from .material import Material
 
 
@@ -33,26 +32,26 @@ class MJCFBuilder:
     def add_visual_and_collision_default_classes(self, root: etree.Element):
         default_elem = etree.SubElement(root, "default")
         visual_default_elem = etree.SubElement(default_elem, "default")
-        visual_default_elem.attrib["class"] = constants.CLASS_VISUAL
+        visual_default_elem.attrib["class"] = "visual"
         etree.SubElement(
             visual_default_elem,
             "geom",
-            group=constants.GROUP_VISUAL,
-            type=constants.GEOM_TYPE_MESH,
-            contype=constants.CONTYPE_NONE,
-            conaffinity=constants.CONAFFINITY_NONE,
+            group="2",
+            type="mesh",
+            contype="0",
+            conaffinity="0",
         )
 
         collision_default_elem = etree.SubElement(default_elem, "default")
-        collision_default_elem.attrib["class"] = constants.CLASS_COLLISION
+        collision_default_elem.attrib["class"] = "collision"
         etree.SubElement(
             collision_default_elem,
             "geom",
-            group=constants.GROUP_COLLISION,
-            type=constants.GEOM_TYPE_MESH,
-            margin=constants.COLLISION_MARGIN,
-            solref=constants.COLLISION_SOLREF,
-            solimp=constants.COLLISION_SOLIMP,
+            group="3",
+            type="mesh",
+            margin="0.006",
+            solref="0.0005 1",
+            solimp="0.998 0.9999 0.0005",
         )
 
     def add_assets(self, root: etree.Element, mtls: List[Material]) -> etree.Element:
@@ -95,17 +94,17 @@ class MJCFBuilder:
         process_mtl = len(materials) > 0
 
         if isinstance(mesh, trimesh.base.Trimesh):
-            meshname = Path(f"{filename.stem}{constants.EXT_OBJ}")
+            meshname = Path(f"{filename.stem}.obj")
             etree.SubElement(asset_elem, "mesh", file=meshname.as_posix())
-            geom_attrs = {"class": constants.CLASS_VISUAL, "mesh": meshname.stem}
+            geom_attrs = {"class": "visual", "mesh": meshname.stem}
             if process_mtl:
                 geom_attrs["material"] = materials[0].name
             etree.SubElement(obj_body, "geom", **geom_attrs)
         else:
             for i, (name, geom) in enumerate(mesh.geometry.items()):
-                meshname = Path(f"{filename.stem}_{i}{constants.EXT_OBJ}")
+                meshname = Path(f"{filename.stem}_{i}.obj")
                 etree.SubElement(asset_elem, "mesh", file=meshname.as_posix())
-                geom_attrs = {"class": constants.CLASS_VISUAL, "mesh": meshname.stem}
+                geom_attrs = {"class": "visual", "mesh": meshname.stem}
                 if process_mtl:
                     geom_attrs["material"] = name
                 etree.SubElement(obj_body, "geom", **geom_attrs)
@@ -116,29 +115,26 @@ class MJCFBuilder:
         filename = self.filename
 
         collision_files = sorted(
-            [x for x in work_dir.glob(f"{filename.stem}{constants.SUFFIX_COLLISION}*{constants.EXT_OBJ}") if x.is_file()],
+            [x for x in work_dir.glob(f"{filename.stem}_collision_*.obj") if x.is_file()],
             key=lambda p: int(p.stem.split("_")[-1]),
         )
 
-        if collision_files:
-            for collision in collision_files:
-                etree.SubElement(asset_elem, "mesh", file=collision.name)
-                rgb = np.random.rand(3)
-                etree.SubElement(
-                    obj_body,
-                    "geom",
-                    mesh=collision.stem,
-                    rgba=f"{rgb[0]} {rgb[1]} {rgb[2]} 1",
-                    **{"class": constants.CLASS_COLLISION},
-                )
-        else:
-            if isinstance(mesh, trimesh.base.Trimesh):
-                meshname = Path(f"{filename.stem}{constants.EXT_OBJ}")
-                etree.SubElement(obj_body, "geom", mesh=meshname.stem, **{"class": constants.CLASS_COLLISION})
-            else:
-                for i, (name, geom) in enumerate(mesh.geometry.items()):
-                    meshname = Path(f"{filename.stem}_{i}{constants.EXT_OBJ}")
-                    etree.SubElement(obj_body, "geom", mesh=meshname.stem, **{"class": constants.CLASS_COLLISION})
+        if not collision_files:
+            raise RuntimeError(
+                f"No collision meshes found for {self.filename.stem}."
+                " Run the convex decomposition step before building MJCFs."
+            )
+
+        for collision in collision_files:
+            etree.SubElement(asset_elem, "mesh", file=collision.name)
+            rgb = np.random.rand(3)
+            etree.SubElement(
+                obj_body,
+                "geom",
+                mesh=collision.stem,
+                rgba=f"{rgb[0]} {rgb[1]} {rgb[2]} 1",
+                **{"class": "collision"},
+            )
 
     def build(self, add_free_joint: bool = False):
         filename = self.filename
@@ -154,15 +150,15 @@ class MJCFBuilder:
             etree.SubElement(
                 obj_body,
                 "joint",
-                type=constants.JOINT_TYPE_FREE,
-                damping=constants.FREEJOINT_DAMPING,
+                type="free",
+                damping="0.1",
             )
 
         self.add_visual_geometries(obj_body, asset_elem)
         self.add_collision_geometries(obj_body, asset_elem)
 
         tree = etree.ElementTree(root)
-        etree.indent(tree, space=constants.XML_INDENTATION, level=0)
+        etree.indent(tree, space="  ", level=0)
         self.tree = tree
 
     def compile_model(self):
@@ -182,6 +178,6 @@ class MJCFBuilder:
     def save_mjcf(self):
         if self.tree is None:
             raise ValueError("Tree has not been defined yet.")
-        xml_path = self.work_dir / f"{self.filename.stem}{constants.EXT_XML}"
+        xml_path = self.work_dir / f"{self.filename.stem}.xml"
         self.tree.write(xml_path.as_posix(), encoding="utf-8")
         logger.info(f"Saved MJCF to {xml_path}")

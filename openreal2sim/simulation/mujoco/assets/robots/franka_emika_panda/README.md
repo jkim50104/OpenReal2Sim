@@ -14,7 +14,7 @@ description](https://github.com/frankaemika/franka_ros/tree/develop/franka_descr
   <img src="panda.png" width="400">
 </p>
 
-## URDF → MJCF derivation steps
+## URDF to MJCF derivation steps
 
 1. Converted the DAE [mesh
    files](https://github.com/frankaemika/franka_ros/tree/develop/franka_description/meshes/visual)
