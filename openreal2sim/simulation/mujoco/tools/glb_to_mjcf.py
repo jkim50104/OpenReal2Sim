@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import json
 import sys
 import time
@@ -308,8 +306,8 @@ def main(
         elapsed = time.perf_counter() - start
         summaries.append((glb_path, elapsed, metadata, asset_type))
         logger.success(
-            f"  [OK] {metadata['xml'].name} "
-            f"(visual: {metadata['visual_obj'].name}, collisions: {metadata['collision_parts']} parts) "
+            f"  [OK] {metadata['xml']} "
+            f"(visual: {metadata['visual_obj']}, collisions: {metadata['collision_parts']} parts) "
             f"in {elapsed:.1f}s"
         )
 

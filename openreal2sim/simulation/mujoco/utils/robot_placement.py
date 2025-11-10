@@ -1,5 +1,3 @@
-"""Robot placement heuristics for MuJoCo scenes (adapted from IsaacLab)."""
-
 import numpy as np
 import transforms3d
 

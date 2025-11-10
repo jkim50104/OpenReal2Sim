@@ -1,5 +1,3 @@
-"""Utilities for fusing robot MJCFs with reconstructed scenes."""
-
 from __future__ import annotations
 
 import json

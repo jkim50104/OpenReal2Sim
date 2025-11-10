@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-"""Fuse reconstructed assets with the Panda robot MJCF."""
-
 from __future__ import annotations
 
 import sys

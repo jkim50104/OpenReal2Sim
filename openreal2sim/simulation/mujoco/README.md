@@ -9,8 +9,7 @@ This module provides tools for converting reconstructed 3D assets to MuJoCo simu
 Build the MuJoCo container locally:
 
 ```bash
-cd docker/mujoco
-docker build -t mujoco:dev .
+docker build -t mujoco:dev -f docker/mujoco/Dockerfile .
 ```
 
 Or using docker compose:
@@ -46,14 +45,11 @@ Then run the tools under `openreal2sim/simulation/mujoco/tools` directly.
 
 ### (Optional) Simplify GLB Meshes
 
-If your GLB files have too many triangles and cause performance issues, you can simplify them first:
-
 ```bash
-python openreal2sim/simulation/mujoco/tools/simplify_glb.py \
-  --input input.glb --output output.glb --target-tris 5000
+python openreal2sim/simulation/mujoco/tools/simplify_scene.py --scene-name demo_genvideo
 ```
 
-This step is optional. Only use it if meshes are too complex for your use case.
+**WARNING: This overwrites GLB files in place. Make sure you have backups!**
 
 ### GLB to MJCF Conversion
 
@@ -70,19 +66,6 @@ This will:
 - Convert each GLB to MJCF using CoACD for convex decomposition
 - Output MJCF assets to `outputs/<scene_name>/simulation/mujoco/mjcf/`
 
-**Key options:**
-- `--coacd-threshold`: Object concavity threshold (default: 0.05)
-- `--coacd-max-hulls`: Max convex hulls for objects (default: 64)
-- `--background-threshold`: Background concavity threshold (default: 0.02)
-- `--background-max-hulls`: Max convex hulls for background (default: 512)
-- `--add-free-joint`: Add freejoint to root body
-
-**For custom GLB files:**
-
-```bash
-python openreal2sim/simulation/mujoco/tools/glb_to_mjcf.py \
-  --inputs input.glb --output-dir output_directory
-```
 
 ### Scene Fusion
 
@@ -138,6 +121,29 @@ View the fused scene with MuJoCo's viewer:
 ```bash
 python -m mujoco.viewer --mjcf outputs/demo_genvideo/simulation/mujoco/scene.xml
 ```
+
+### Trajectory Replay
+
+Replay trajectories generated from IsaacSim heuristics:
+
+```bash
+python openreal2sim/simulation/mujoco/tools/replay_trajectory.py \
+  --demo-path outputs/demo_genvideo/demos/demo_0/env_000
+```
+
+This script:
+- Loads robot joint trajectories from `joint_pos.npy`, `joint_vel.npy`, and `gripper_cmd.npy`
+- Initializes objects at their reconstructed positions from `config.json`
+- Uses PD control with gravity compensation for realistic physics
+- Provides interactive viewer with keyboard controls (Space: pause, R: restart)
+
+**Options:**
+- `--loop`: Loop trajectory playback continuously
+- `--default-mass`: Default object mass in kg (default: 0.1)
+- `--object-masses`: Path to YAML file with custom object masses
+
+
+Due to dynamics gap between simulators, trajectories that work in Isaac Sim may not always succeed in MuJoCo. You may need to adjust simulation parameters to achieve stable playback.
 
 ## Output Structure
 
