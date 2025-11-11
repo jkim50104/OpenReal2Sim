@@ -6,4 +6,4 @@ Current supported physics simulators:
 
 - [x] IssacLab ([IssacLab v2.0.2](https://isaac-sim.github.io/IsaacLab/v2.0.2/source/setup/ecosystem.html) & [IssacSim v4.5.0](https://docs.isaacsim.omniverse.nvidia.com/4.5.0/index.html))
 - [x] Maniskills
-- [ ] Mujoco
+- [x] Mujoco

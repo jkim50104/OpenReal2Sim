@@ -12,6 +12,7 @@ It supports our multiple research projects, including [PhysWorld](https://points
 - [x] IsaacLab support for scenario import, camera setup, and rendering from the same input viewpoint 
 - [x] Preliminary IsaacLab support for robotic trajectory generation by cross-embodiment transfer from videos
 - [x] Preliminary Maniskills support
+- [x] Preliminary Mujoco support
 
 ## Installation
 

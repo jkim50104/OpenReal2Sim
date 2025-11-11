@@ -5,6 +5,7 @@ Docker provides a sharable environment to run the code in this repository.
 We provide separate Dockerfiles for real2sim reconstruction and different robot simulation environments:
 - `docker/real2sim/Dockerfile` — for Real2Sim preprocessing and reconstruction.
 - `docker/isaaclab/Dockerfile` — for IsaacLab simulation and policy training.
+- `docker/mujoco/Dockerfile` — for Mujoco simulation.
 
 Each can be built and run independently depending on your use case.
 
