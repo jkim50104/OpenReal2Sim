@@ -39,13 +39,6 @@ If you find this repository useful in your research, please consider citing:
 }
 ```
 ```
-@inproceedings{physworld,
-  title={Robot Learning from a Physical World Model},
-  author = {Mao, Jiageng and He, Sicheng and Wu, Hao-Ning and You, Yang and Sun, Shuyang and Wang, Zhicheng and Bao, Yanan and Chen, Huizhong and Guibas, Leonidas and Guizilini, Vitor and Zhou, Howard and Wang, Yue},
-  year={2025},
-}   
-```
-```
 @inproceedings{rola,
   title={Robot learning from any images},
   author={Zhao, Siheng and Mao, Jiageng and Chow, Wei and Shangguan, Zeyu and Shi, Tianheng and Xue, Rong and Zheng, Yuxi and Weng, Yijia and You, Yang and Seita, Daniel and others},
