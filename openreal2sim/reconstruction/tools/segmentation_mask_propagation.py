@@ -140,7 +140,9 @@ def propagate_maks(segmented_video: object, output_directory: Path):
 def mask_propagation(keys, key_scene_dicts):
     for key in keys:
         print("propagating for", key)
-        propagate_maks(key_scene_dicts[key], OUT_ROOT/key)
+        scene = key_scene_dicts[key]
+        propagate_maks(scene, OUT_ROOT/key)
+        key_scene_dicts[key] = scene
     return key_scene_dicts
 
 
