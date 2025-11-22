@@ -16,7 +16,8 @@ Note:
             "background": {
                 "original": # original background mesh path,
             },
-b                "point":  # a point on the ground plane [x,y,z],
+            "groundplane_in_cam": {
+                "point":  # a point on the ground plane [x,y,z],
                 "normal": # the normal of the ground plane [x,y,z], 
             }
         }
@@ -31,18 +32,6 @@ import pickle
 from PIL import Image
 
 # ──────────────────── util ─────────────────────
-def depth_to_pointcloud(depth, intrinsic):
-    H, W = depth.shape
-    u, v = np.meshgrid(np.arange(W), np.arange(H))
-    u = u.reshape(-1)
-    v = v.reshape(-1)
-    depth = depth.reshape(-1)
-    pointcloud = np.zeros((len(depth), 3))
-    pointcloud[:, 0] = (u - intrinsic[0, 2]) * depth / intrinsic[0, 0]
-    pointcloud[:, 1] = (v - intrinsic[1, 2]) * depth / intrinsic[1, 1]
-    pointcloud[:, 2] = depth
-    return pointcloud
-
 def get_boundary_edges(mesh: trimesh.Trimesh):
     edges = np.vstack([
         mesh.faces[:, [0, 1]],
