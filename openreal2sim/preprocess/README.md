@@ -38,7 +38,7 @@ Based on the input type (image or video), we obtain depth, camera infos, and dyn
 
 If we have GT info, e.g., depth image, known intrinsics, calibrate the predicted depth and camera info to GT. This step is optional and is needed only when ground truth image is provided. 
 
-### Record3D Usage
+## Record3D Usage
 
 Record3D is an iOS app that can record rgb, depth and camera info. If you want to use Record3D to record the data, please make sure that the image width is larger than image height, and export the data as r3d format in the library section of the app. Then, put the .r3d file under the data folder.
 
