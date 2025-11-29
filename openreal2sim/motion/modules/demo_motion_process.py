@@ -258,8 +258,8 @@ def demo_motion_process(keys, key_scene_dicts, key_cfgs):
         trajs = trajs[downsampled_indices]
         
 
-        trajs = lift_traj(trajs, height=0.02)
-        scene_json_dict["lift_height"] = 0.02
+        # trajs = lift_traj(trajs, height=0.02)
+        # scene_json_dict["lift_height"] = 0.02
         print(f"Downsampled indices: {downsampled_indices}")
         downsampled_traj_path = base_dir / f"outputs/{key}/simulation" / f"{max_placement_oid}_final_traj.npy"
         
