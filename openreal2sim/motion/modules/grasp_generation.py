@@ -8,6 +8,8 @@ import open3d as o3d
 from graspnetAPI.grasp import GraspGroup
 from pathlib import Path
 base_dir = Path.cwd()
+sys.path.append(str(base_dir / Path('openreal2sim') / Path('motion')))
+sys.path.append(str(base_dir / Path('openreal2sim') / Path('motion') / Path('utils')))
 sys.path.append(str(base_dir / "third_party"))
 from graspness_unofficial.models.graspnet import GraspNet, pred_decode
 from graspness_unofficial.dataset.graspnet_dataset import minkowski_collate_fn
@@ -241,9 +243,9 @@ def run_for_key(
                 gg = get_best_grasp_with_hints(gg, grasp_point, grasp_dir_hint)
             elif scene_dict["objects"][i]["grasp_point"] is not None and strategy == "point_only":
                 grasp_point = scene_dict["objects"][i]["grasp_point"]
-                gg = get_best_grasp_with_hints(gg, grasp_point, [0,0,1])
+                gg = get_best_grasp_with_hints(gg, grasp_point, [0,0,-1])
             else:
-                z = [0,0,1] # default direction
+                z = [0,0,-1] # default direction
                 gg = get_best_grasp_with_hints(gg, None, z)
             npy_path = npy_path.replace(".npy", "_rescored.npy")
             gg.save_npy(npy_path)
