@@ -206,6 +206,7 @@ def background_mesh_generation(keys, key_scene_dicts, key_cfgs):
         assert len(obj_pts) > 0, f"[Error] No valid object points found in {key}! We need them to determine the ground normal direction."
         p0 = plane_pts.mean(axis=0)
         signed = np.median((obj_pts - p0) @ normal)
+        # np.mean((obj_pts - p0) @ normal) is always positive
         if signed < 0:
             print(f"[Info] Flipping normal direction for {key} because the median signed distance is negative")
             normal = -normal
