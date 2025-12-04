@@ -119,12 +119,12 @@ def main():
         os.path.join(wilor_models_dir, "wilor_final.ckpt")
     )
 
-    # TODO: MANO params need to be downloaded after registering on certain website.
+    # TODO: MANO params need to be downloaded after registering on certain website. This needs to be done manually.
 
     # --- Grasp Generation Checkpoints ---
     print("\n--- [9/9] Downloading Grasp Generation checkpoints ---")
     ckpt_dir = os.path.join(base_dir, "third_party/graspness_unofficial/ckpt")
-    os.makedirs(ckpt_dir, exist_                                                                                ok=True)
+    os.makedirs(ckpt_dir, exist_ok=True)
     download_with_gdown(
         "10o5fc8LQsbI8H0pIC2RTJMNapW9eczqF",
         os.path.join(ckpt_dir, "minkuresunet_kinect.tar")
