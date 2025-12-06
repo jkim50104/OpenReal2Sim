@@ -93,7 +93,6 @@ class ReconAgent:
                     "simple_trajs": str(new_obj_simple_trajs_path),
                     "hybrid_trajs": str(new_obj_hybrid_trajs_path)
                 }
-                            # If there is a video in data folder matching the key, copy it as video.mp4
             json_path = save_dir / "scene.json"
             with open(json_path, 'w') as f:
                 json.dump(scene_json, f, indent=2)
