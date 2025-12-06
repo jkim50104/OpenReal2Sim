@@ -24,27 +24,20 @@ def updateMetadata(metadata_path: Path, reconstruction_time: int, status: str = 
 
 def run_recon_agent_for_key(key, stage=None):
     """Run recon_agent.py for a specific key"""
-    # Get the path to recon_agent.py (same directory as this script)
     script_dir = Path(__file__).parent
     recon_agent_path = script_dir / "recon_agent.py"
 
-    # Create log directory for this key
+    
+    timestamp = datetime.now().strftime("%m-%d-%H:%M")
     log_dir = Path("outputs") / key / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
-
-    # Generate timestamp for log files (month-day-hour:minute)
-    timestamp = datetime.now().strftime("%m-%d-%H:%M")
-
-    # Define log file paths
     stdout_log = log_dir / f"{timestamp}_stdout.log"
     stderr_log = log_dir / f"{timestamp}_stderr.log"
 
-    # Build the command
     cmd = [sys.executable, str(recon_agent_path), "--key", key, "--label", key]
     if stage:
         cmd.extend(["--stage", stage])
 
-    # Flag to control the timer thread
     stop_timer = threading.Event()
     start_time = time.time()
 
@@ -55,20 +48,17 @@ def run_recon_agent_for_key(key, stage=None):
             print(f"\rRunning {key} ......... [{elapsed}s]", end='', flush=True)
             time.sleep(1)
 
-    # Start the timer thread
     timer_thread = threading.Thread(target=print_timer, daemon=True)
     timer_thread.start()
     metadata_path = Path("outputs") / key / "metadata.yaml"
 
     try:
-        # Open log files and run the command
         with open(stdout_log, 'w') as stdout_file, open(stderr_log, 'w') as stderr_file:
             result = subprocess.run(cmd, check=True, stdout=stdout_file, stderr=stderr_file)
         stop_timer.set()
         timer_thread.join(timeout=1)
         elapsed = int(time.time() - start_time)
         print(f"\rRunning {key} ......... [{elapsed}s] - Done!")
-        # Write metadata with reconstruction info
         updateMetadata(metadata_path, elapsed, "success")
         return True
     except subprocess.CalledProcessError as e:
@@ -98,7 +88,6 @@ def main(config_file: str = "config/config.yaml", stage: str = None):
         results[key] = success
         print(f"{'_'*60}\n")
 
-    # Exit with error if any key failed
     if not all(results.values()):
         sys.exit(1)
 
