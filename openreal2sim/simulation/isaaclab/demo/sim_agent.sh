@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd /app && pwd)"
 
 # Default parameters
-gpu_id="0"
+gpu_id="1"
 CONFIG_PATH="${ROOT_DIR}/config/config.yaml"
 declare -a PIPELINE=()
 START_IDX=""
@@ -168,7 +168,7 @@ run_stage() {
 
   case "${stage}" in
     usd_conversion)
-      python openreal2sim/simulation/isaaclab/sim_preprocess/usd_conversion.py --key "${key}" \
+      python openreal2sim/simulation/isaaclab/demo/sim_utils_demo/usd_conversion.py \
       ;;
     sim_heuristic_manip)
       echo "Setting CUDA_VISIBLE_DEVICES to ${CUDA_VISIBLE_DEVICES}"
