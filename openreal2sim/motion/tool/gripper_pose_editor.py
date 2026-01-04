@@ -392,11 +392,11 @@ def api_save_pose():
             if npz_path.exists():
                 existing_grasps, existing_scores, existing_bite_distance = load_grasps_npz(npz_path)
                 
-                # Append new grasp to existing ones
-                grasps = np.vstack([existing_grasps, new_grasp])
-                scores = np.concatenate([existing_scores, new_score])
+                # Prepend new grasp to existing ones (new grasp goes first)
+                grasps = np.vstack([new_grasp, existing_grasps])
+                scores = np.concatenate([new_score, existing_scores])
              
-                bite_distance = np.vstack([existing_bite_distance, new_bite_distance])
+                bite_distance = np.vstack([new_bite_distance, existing_bite_distance])
                 total_grasps = len(grasps)
             else:
                 # First grasp for this object

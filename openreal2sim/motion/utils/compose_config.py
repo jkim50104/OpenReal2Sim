@@ -10,7 +10,7 @@ default_config = {
     "manipulated_oid": None,
     "overwrite": True,
     "num_frames": 7,
-    "filter_collisions": False,
+    "filter_collisions": True,
 }
 
 def compose_configs(key_name: str, config: dict) -> dict:

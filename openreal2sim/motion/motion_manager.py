@@ -30,9 +30,9 @@ class MotionAgent:
                 scene_json_dict = json.load(f)
             self.key_scene_json_dicts[key] = scene_json_dict
         self.stages = [
-            # "hand_extraction",
-            # "demo_motion_process",
-            # "grasp_point_extraction",
+            "hand_extraction",
+            "demo_motion_process",
+            "grasp_point_extraction",
             "grasp_generation",
         ]
         if stage is not None:
