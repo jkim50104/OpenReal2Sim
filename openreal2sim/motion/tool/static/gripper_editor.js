@@ -734,8 +734,8 @@ function visualizeSavedGrasps() {
     });
     graspVisualizations = [];
     
-    // Add new visualizations (semi-transparent grippers)
-    savedGrasps.forEach((grasp, idx) => {
+    // Add new visualizations (semi-transparent grippers) - only show first 10
+    savedGrasps.slice(0, 10).forEach((grasp, idx) => {
         // Convert from row-major 4x4 to column-major 16-element array for Three.js
         const flatPose = [];
         for (let j = 0; j < 4; j++) {  // column
