@@ -13,15 +13,14 @@ END_IDX=""
 
 usage() {
   cat <<'EOF'
-Usage: sim_agent.sh [options]
+Usage: sim_pure_render_agent.sh [options]
 
 Options:
   --config <path>        Path to config.yaml file (default: /app/config/config.yaml)
   --stage <stage>         Stage to run (can be specified multiple times)
                           Available stages:
-                            - usd_conversion
-                            - sim_heuristic_manip
-                            - sim_randomize_rollout
+                            - sim_calib
+                            - sim_direct_render
                           If not specified, runs all stages in order
   --start <index>         Start index (0-based) for keys to process (inclusive)
   --end <index>           End index (0-based) for keys to process (exclusive)
@@ -29,16 +28,18 @@ Options:
   -h, --help             Show this message and exit
 
 The script loads keys from config.yaml and runs for each key:
-  1. USD conversion (`isaaclab/sim_preprocess/usd_conversion.py`)
-  2. Heuristic manipulation (`isaaclab/sim_heuristic_manip.py`)
-  3. Randomized rollout (`isaaclab/sim_randomize_rollout.py`)
+  1. Calibration (`isaaclab/demo/sim_calib.py`)
+  2. Direct rendering (`isaaclab/demo/sim_direct_render.py`)
 
 Examples:
   # Process keys from index 10 to 20 (exclusive)
-  sim_agent.sh --start 10 --end 20
-  
+  sim_pure_render_agent.sh --start 10 --end 20
+
   # Process keys from index 5 to the end
-  sim_agent.sh --start 5
+  sim_pure_render_agent.sh --start 5
+
+  # Run only calibration stage
+  sim_pure_render_agent.sh --stage sim_calib
 EOF
 }
 
@@ -53,12 +54,12 @@ while [[ $# -gt 0 ]]; do
       STAGE="${2:?Missing value for --stage}"
       # Validate stage
       case "${STAGE}" in
-        usd_conversion|sim_heuristic_manip|sim_randomize_rollout)
+        sim_calib|sim_direct_render)
           PIPELINE+=("${STAGE}")
           ;;
         *)
           echo "[ERR] Invalid stage: ${STAGE}" >&2
-          echo "[ERR] Valid stages: usd_conversion, sim_heuristic_manip, sim_randomize_rollout" >&2
+          echo "[ERR] Valid stages: sim_calib, sim_direct_render" >&2
           exit 1
           ;;
       esac
@@ -109,11 +110,11 @@ try:
         if not all_keys:
             print('[ERR] No keys found in config.yaml', file=sys.stderr)
             sys.exit(1)
-        
+
         # Apply slice if specified
         start_idx = ${START_IDX:--1}
         end_idx = ${END_IDX:--1}
-        
+
         if start_idx >= 0 and end_idx >= 0:
             keys = all_keys[start_idx:end_idx]
         elif start_idx >= 0:
@@ -122,11 +123,11 @@ try:
             keys = all_keys[:end_idx]
         else:
             keys = all_keys
-        
+
         if not keys:
             print('[ERR] No keys in specified range', file=sys.stderr)
             sys.exit(1)
-        
+
         print(' '.join(keys))
 except Exception as e:
     print(f'[ERR] Failed to load config: {e}', file=sys.stderr)
@@ -152,7 +153,7 @@ cd "${ROOT_DIR}"
 
 # If no stages specified, run all stages in order
 if [[ ${#PIPELINE[@]} -eq 0 ]]; then
-  PIPELINE=("usd_conversion" "sim_heuristic_manip" "sim_randomize_rollout")
+  PIPELINE=("sim_calib" "sim_direct_render")
   echo "[INFO] No stages specified, running all stages: ${PIPELINE[*]}"
 else
   echo "[INFO] Running specified stages: ${PIPELINE[*]}"
@@ -167,16 +168,13 @@ run_stage() {
   echo "=============================="
 
   case "${stage}" in
-    usd_conversion)
-      python openreal2sim/simulation/isaaclab/demo/sim_utils_demo/usd_conversion.py \
-      ;;
-    sim_heuristic_manip)
+    sim_calib)
       echo "Setting CUDA_VISIBLE_DEVICES to ${CUDA_VISIBLE_DEVICES}"
-      python openreal2sim/simulation/isaaclab/demo/sim_heuristic_manip.py \
+      python openreal2sim/simulation/isaaclab/demo/sim_calib.py \
         --key "${key}" \
       ;;
-    sim_randomize_rollout)
-      python openreal2sim/simulation/isaaclab/demo/sim_randomize_rollout.py \
+    sim_direct_render)
+      python openreal2sim/simulation/isaaclab/demo/sim_direct_render.py \
         --key "${key}" \
       ;;
     *)
@@ -194,5 +192,3 @@ for k in "${KEYS[@]}"; do
 done
 
 echo "[DONE] Processed keys: ${KEYS[*]}"
-
-

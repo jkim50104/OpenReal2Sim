@@ -220,7 +220,8 @@ class GraspGroup:
         self,
         direction_hint: Optional[np.ndarray] = None,
         use_point_hint: bool = False,
-        reorder_num: int = 50
+        reorder_num: int = -1,
+        only_score: bool = False,
     ) -> "GraspGroup":
         """
         Rescore grasps based on bite_distances and direction hint.
@@ -235,7 +236,8 @@ class GraspGroup:
         """
         if len(self._rotations) == 0:
             return self
-        
+        if reorder_num == -1:
+            reorder_num = len(self._rotations)
         N = min(reorder_num, len(self._rotations))
         
         distance_scores = None
@@ -261,22 +263,21 @@ class GraspGroup:
             dir_term = 0.5 * (cosv + 1.0)
         
         original_scores = self._scores[:N].astype(np.float64)
-        if original_scores.max() > original_scores.min():
-            net_term = (original_scores - original_scores.min()) / (original_scores.max() - original_scores.min())
-        else:
-            net_term = np.ones_like(original_scores)
-        
+      
         w_dist = 0.5 if (use_point_hint and distance_scores is not None) else 0.0
         w_dir = 0.2 if (direction_hint is not None and dir_term is not None) else 0.0
         w_net = 1.0 - w_dist - w_dir
-        
+        if only_score:
+            w_dist = 0.0
+            w_dir = 0.0
+            w_net = 1.0
         new_scores = np.zeros(N, dtype=np.float64)
         if w_dist > 0:
             new_scores += w_dist * distance_scores
         if w_dir > 0:
             new_scores += w_dir * dir_term
         if w_net > 0:
-            new_scores += w_net * net_term
+            new_scores += w_net * original_scores
         
         self._scores[:N] = new_scores.astype(np.float32)
         

@@ -27,19 +27,6 @@ def download_file(url, destination):
     urlretrieve(url, destination)
     print("Download complete.")
 
-def download_with_gdown(file_id, destination):
-    """Downloads a file from Google Drive using gdown."""
-    dest_dir = os.path.dirname(destination)
-    print(f"Ensuring directory exists: {dest_dir}")
-    os.makedirs(dest_dir, exist_ok=True)
-    file_name = os.path.basename(destination)
-    print(f"Downloading {file_name} from Google Drive (ID: {file_id}) to {destination}...")
-    # Use gdown command to download from Google Drive using file ID
-    run_command(
-        ["gdown", file_id, "-O", destination],
-        cwd=None
-    )
-    print("Download complete.")
 
 def download_sam3d_checkpoints(destination_dir):
     """Downloads SAM 3D Objects checkpoints from HuggingFace (requires auth)."""
@@ -129,7 +116,8 @@ def main():
     snapshot_download(
         repo_id="licesma/foundationpose_weights",
         repo_type="dataset",
-        local_dir=fp_weights_dir
+        local_dir=fp_weights_dir,
+        cache_dir=os.path.join(base_dir, ".cache")
     )
 
     print("\n--- [7/11] Compiling FoundationPose C++ extension ---")
@@ -164,22 +152,19 @@ def main():
         os.path.join(wilor_models_dir, "wilor_final.ckpt")
     )
 
-    # TODO: MANO params need to be downloaded after registering on certain website. This needs to be done manually.
+    #TODO: MANO params need to be downloaded after registering on certain website. This needs to be done manually.
 
-    # --- Grasp Generation Checkpoints ---
-    print("\n--- [10/11] Downloading Grasp Generation checkpoints ---")
-    ckpt_dir = os.path.join(base_dir, "third_party/graspness_unofficial/ckpt")
-    os.makedirs(ckpt_dir, exist_ok=True)
-    download_with_gdown(
-        "10o5fc8LQsbI8H0pIC2RTJMNapW9eczqF",
-        os.path.join(ckpt_dir, "minkuresunet_kinect.tar")
+    #--- Grasp Generation Checkpoints ---
+    print("\n--- [10/11] Downloading GraspGen checkpoints ---")
+    graspgen_models_dir = os.path.join(base_dir, "third_party/GraspGen/GraspGenModels")
+    os.makedirs(graspgen_models_dir, exist_ok=True)
+    snapshot_download(
+        repo_id="adithyamurali/GraspGenModels",
+        local_dir=graspgen_models_dir,
+        cache_dir=os.path.join(base_dir, ".cache")
     )
-    download_with_gdown(
-        "1RfdpEM2y0x98rV28d7B2Dg8LLFKnBkfL",
-        os.path.join(ckpt_dir, "minkuresunet_realsense.tar")
-    )
-
-    # --- SAM 3D Objects Checkpoints (requires HF auth) ---
+    
+     # --- SAM 3D Objects Checkpoints (requires HF auth) ---
     print("\n--- [11/11] Downloading SAM 3D Objects checkpoints ---")
     sam3d_ckpt_dir = os.path.join(base_dir, "third_party/sam-3d-objects/checkpoints/hf")
     download_sam3d_checkpoints(sam3d_ckpt_dir)
