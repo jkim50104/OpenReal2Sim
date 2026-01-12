@@ -4,7 +4,8 @@
 Generate textured meshes for each segmented object using SAM-3D.
 Step 1: Extract object crops with alpha-channel from frame-0 & masks,
         saving them to outputs/{key}/sam-3d/ folder.
-Step 2: Run SAM-3D inference to generate GLB meshes.
+Step 2: Run SAM-3D inference in sam3d container to generate GLB meshes.
+Step 3: Post-process results and update scene_dict.
 
 Inputs:
     - outputs/{key}/scene/scene.pkl (must contain the "mask" key)
@@ -13,21 +14,10 @@ Outputs:
     - outputs/{key}/sam-3d/image.png (original RGB image)
     - outputs/{key}/sam-3d/{oid}_{name}.glb (generated 3D mesh)
     - outputs/{key}/scene/scene.pkl (updated with "objects" key)
-Note:
-    - added key "objects": {
-            "oid": {
-                "oid":   # object id,
-                "name":  # object name,
-                "glb":   # object glb path,
-                "mask":  # object mask [H, W] boolean array,
-            },
-            ...
-        }
 """
 
-import os
 import pickle
-import sys
+import subprocess
 from pathlib import Path
 
 import numpy as np
@@ -36,10 +26,6 @@ import yaml
 
 base_dir = Path.cwd()
 output_dir = base_dir / "outputs"
-
-# Add SAM-3D to path
-sam3d_dir = str(base_dir / "third_party/sam-3d-objects/notebook")
-sys.path.insert(0, sam3d_dir)
 
 # ------------------------------------------------------------------
 
@@ -109,30 +95,23 @@ def create_sam_3d_images(keys, key_scene_dicts):
         scene_dict = key_scene_dicts[key]
         objs = load_obj_masks(scene_dict["mask"])
 
-        # Create output directory: outputs/{key}/sam-3d/
         sam_3d_dir = output_dir / key / "sam-3d"
         sam_3d_dir.mkdir(parents=True, exist_ok=True)
 
-        # Get original image from frame 0
         image = scene_dict["images"][0]
 
-        # Save original image
         original_img_path = sam_3d_dir / "image.png"
         Image.fromarray(image).save(original_img_path)
         print(f"[Info] [{key}] Saved original image → {original_img_path}")
 
         obj_info_list = []
 
-        # Create masked RGBA image for each object
         for idx, item in enumerate(objs):
             oid = item["oid"]
             mask = item["mask"]
             name = item["name"]
 
-            # Create RGBA image with transparency
             rgba = rgb_with_transparency(image, mask)
-
-            # Save as {idx}.png (0-based index for SAM-3D load_masks)
             png_path = sam_3d_dir / f"{idx}.png"
             Image.fromarray(rgba).save(png_path)
             print(f"[Info] [{key}] Saved mask for '{name}' (oid={oid}) → {png_path}")
@@ -153,6 +132,49 @@ def create_sam_3d_images(keys, key_scene_dicts):
     return key_info
 
 
+def run_sam3d_container(sam_3d_dir: Path):
+    """
+    Execute SAM-3D inference in the sam3d container via Docker-in-Docker.
+    
+    Args:
+        sam_3d_dir: Path to the sam-3d directory containing image.png and mask PNGs
+    
+    Raises:
+        RuntimeError: If the container execution fails
+    """
+    import os
+    
+    host_project_root = os.environ.get("HOST_PROJECT_ROOT")
+    if not host_project_root:
+        raise RuntimeError("HOST_PROJECT_ROOT environment variable not set. "
+                           "Make sure you're running from docker-compose.")
+    
+    container_path = str(sam_3d_dir).replace(str(base_dir), "/app")
+    gpu_id = os.environ.get("CUDA_VISIBLE_DEVICES", "1")
+    
+    cmd = [
+        "docker", "run", "--rm",
+        "--gpus", "all",
+        "-e", f"CUDA_VISIBLE_DEVICES={gpu_id}",
+        "-v", f"{host_project_root}:/app",
+        "-w", "/app",
+        "sam3d:dev",
+        "micromamba", "run", "-n", "sam3d-objects",
+        "python", "/app/openreal2sim/reconstruction/modules/sam_object_mesh_inference.py",
+        "--sam_3d_dir", container_path
+    ]
+    
+    print(f"[Info] Calling sam3d container for inference...")
+    print(f"[Info] Command: {' '.join(cmd)}")
+    
+    result = subprocess.run(cmd, cwd="/app")
+    
+    if result.returncode != 0:
+        raise RuntimeError(f"SAM-3D inference failed with exit code {result.returncode}")
+    
+    print("[Info] sam3d container inference completed.")
+
+
 def sam_object_mesh_generation(keys, key_scene_dicts, key_cfgs):
     """
     Main entry point for SAM-3D based object mesh generation.
@@ -165,21 +187,9 @@ def sam_object_mesh_generation(keys, key_scene_dicts, key_cfgs):
     Returns:
         Updated key_scene_dicts
     """
-    # Step 1: Create SAM-3D input images
     key_info = create_sam_3d_images(keys, key_scene_dicts)
 
-    # Step 2: Initialize SAM-3D inference pipeline
-    from inference import Inference, load_image, load_masks
-
-    config_path = str(base_dir / "third_party/sam-3d-objects/checkpoints/hf/pipeline.yaml")
-    print(f"[Info] Loading SAM-3D inference pipeline from {config_path}...")
-    inference = Inference(config_path, compile=False)
-    print("[Info] SAM-3D inference pipeline loaded.")
-
-    # Step 3: Run inference and export GLBs for each key
     for key in keys:
-        print(f"[Info] Processing SAM-3D inference for {key}...")
-        scene_dict = key_scene_dicts[key]
         info = key_info[key]
         sam_3d_dir = info["sam_3d_dir"]
         obj_info_list = info["objects"]
@@ -188,35 +198,42 @@ def sam_object_mesh_generation(keys, key_scene_dicts, key_cfgs):
             print(f"[Info] [{key}] No objects to process, skipping.")
             continue
 
-        # Load image and masks using SAM-3D utilities
-        image_path = sam_3d_dir / "image.png"
-        image = load_image(str(image_path))
-        masks = load_masks(str(sam_3d_dir), extension=".png")
+        print(f"[Info] [{key}] Running SAM-3D inference in sam3d container...")
+        run_sam3d_container(sam_3d_dir)
 
-        # Run inference for each mask
-        print(f"[Info] [{key}] Running inference on {len(masks)} objects...")
-        outputs = [inference(image, mask, seed=42) for mask in masks]
+    for key in keys:
+        print(f"[Info] [{key}] Post-processing SAM-3D results...")
+        scene_dict = key_scene_dicts[key]
+        info = key_info[key]
+        sam_3d_dir = info["sam_3d_dir"]
+        obj_info_list = info["objects"]
 
-        # Export GLBs and build object metadata
+        if len(obj_info_list) == 0:
+            continue
+
+        out_dir = output_dir / key / "reconstruction" / "objects"
+        out_dir.mkdir(parents=True, exist_ok=True)
+
         object_meta = {}
-        for idx, (obj_info, output) in enumerate(zip(obj_info_list, outputs)):
+        for obj_info in obj_info_list:
+            idx = obj_info["idx"]
             oid = obj_info["oid"]
             name = obj_info["name"]
             mask = obj_info["mask"]
             stem = f"{oid}_{name}"
 
-            glb = output.get("glb", None)
-            glb_path = sam_3d_dir / f"{stem}.glb"
+            src_glb = sam_3d_dir / f"output_{idx}.glb"
+            dst_glb = out_dir / f"{stem}.glb"
 
-            if glb is not None:
-                glb.export(str(glb_path))
-                print(f"[Info] [{key}] Saved GLB: {glb_path}")
+            if src_glb.exists():
+                src_glb.rename(dst_glb)
+                glb_path = dst_glb
+                print(f"[Info] [{key}] Moved GLB: {src_glb} → {dst_glb}")
             else:
-                print(f"[Warn] [{key}] No GLB in output for {stem}, skipping export.")
+                print(f"[Warn] [{key}] No GLB output for {stem} (expected {src_glb})")
                 glb_path = None
 
-            # Save mask as image for reference
-            mask_png = sam_3d_dir / f"{stem}_mask.jpg"
+            mask_png = out_dir / f"{stem}_mask.jpg"
             Image.fromarray(mask.astype(np.uint8) * 255).save(mask_png)
 
             object_meta[oid] = {
@@ -226,11 +243,9 @@ def sam_object_mesh_generation(keys, key_scene_dicts, key_cfgs):
                 "mask": mask,
             }
 
-        # Step 4: Update scene_dict
         scene_dict["objects"] = object_meta
         key_scene_dicts[key] = scene_dict
 
-        # Save updated scene.pkl
         scene_pkl_path = base_dir / f"outputs/{key}/scene/scene.pkl"
         with open(scene_pkl_path, "wb") as f:
             pickle.dump(scene_dict, f)

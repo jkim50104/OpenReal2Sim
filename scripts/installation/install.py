@@ -45,11 +45,9 @@ def download_sam3d_checkpoints(destination_dir):
     """Downloads SAM 3D Objects checkpoints from HuggingFace (requires auth)."""
     import shutil
     
-    # Check for HF token
     hf_token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
     
     if not hf_token:
-        # Check if token file exists (from huggingface-cli login)
         token_path = os.path.join(
             os.environ.get("HF_HOME", os.path.expanduser("~/.cache/huggingface")), 
             "token"
@@ -62,7 +60,6 @@ def download_sam3d_checkpoints(destination_dir):
     
     print(f"Downloading SAM 3D Objects checkpoints to {destination_dir}...")
     
-    # Download to temp location first (matching setup.md behavior)
     temp_dir = destination_dir + "-download"
     snapshot_download(
         repo_id="facebook/sam-3d-objects",
@@ -71,7 +68,6 @@ def download_sam3d_checkpoints(destination_dir):
         token=hf_token,  # Will use cached token if None
     )
     
-    # Move checkpoints subfolder to final location (setup.md lines 46-47)
     src = os.path.join(temp_dir, "checkpoints")
     if os.path.exists(src):
         os.makedirs(destination_dir, exist_ok=True)
@@ -90,12 +86,19 @@ def main():
     os.chdir(base_dir)
     print(f"Working directory set to: {os.getcwd()}")
 
+    # --- Install Docker ---
+    print("\n--- [1/11] Installing Docker ---")
+    run_command([
+        "bash", "-c",
+        "apt-get update && apt-get install -y --no-install-recommends docker.io && rm -rf /var/lib/apt/lists/*"
+    ])
+
     # --- Install gdown for Google Drive downloads ---
-    print("\n--- [1/9] Installing gdown for Google Drive downloads ---")
+    print("\n--- [2/11] Installing gdown for Google Drive downloads ---")
     run_command([sys.executable, "-m", "pip", "install", "gdown"])
 
     # --- Mega-SAM Dependencies ---
-    print("\n--- [2/9] Setting up Mega-SAM dependencies ---")
+    print("\n--- [3/11] Setting up Mega-SAM dependencies ---")
     download_file(
         "https://huggingface.co/spaces/LiheYoung/Depth-Anything/resolve/main/checkpoints/depth_anything_vitl14.pth",
         "third_party/mega-sam/Depth-Anything/checkpoints/depth_anything_vitl14.pth"
@@ -106,13 +109,13 @@ def main():
     )
 
     # --- Segmentation Dependencies (Grounded-SAM-2) ---
-    print("\n--- [3/9] Downloading Segmentation model ---")
+    print("\n--- [4/11] Downloading Segmentation model ---")
     download_file(
         "https://dl.fbaipublicfiles.com/segment_anything_2/092824/sam2.1_hiera_large.pt",
         "third_party/Grounded-SAM-2/checkpoints/sam2.1_hiera_large.pt"
     )
 
-    print("\n--- [4/9] Building Segmentation CUDA extension ---")
+    print("\n--- [5/11] Building Segmentation CUDA extension ---")
     build_cuda_path = os.path.join(base_dir, "third_party/Grounded-SAM-2")
     run_command(
         [sys.executable, "build_cuda.py", "build_ext", "--inplace", "-v"],
@@ -120,7 +123,7 @@ def main():
     )
 
     # --- FoundationPose Dependencies ---
-    print("\n--- [5/9] Downloading FoundationPose weights ---")
+    print("\n--- [6/11] Downloading FoundationPose weights ---")
     fp_weights_dir = os.path.join(base_dir, "third_party/FoundationPose/weights")
     os.makedirs(fp_weights_dir, exist_ok=True)
     snapshot_download(
@@ -129,7 +132,7 @@ def main():
         local_dir=fp_weights_dir
     )
 
-    print("\n--- [6/9] Compiling FoundationPose C++ extension ---")
+    print("\n--- [7/11] Compiling FoundationPose C++ extension ---")
     fp_cpp_build_path = os.path.join(base_dir, "third_party/FoundationPose/mycpp/build")
     run_command(["rm", "-rf", fp_cpp_build_path])
     os.makedirs(fp_cpp_build_path, exist_ok=True)
@@ -139,7 +142,7 @@ def main():
     )
     run_command(["make", "-j11"], cwd=fp_cpp_build_path)
 
-    print("\n--- [7/9] Compiling FoundationPose bundlesdf CUDA extension ---")
+    print("\n--- [8/11] Compiling FoundationPose bundlesdf CUDA extension ---")
     fp_bundlesdf_path = os.path.join(base_dir, "third_party/FoundationPose/bundlesdf/mycuda")
     run_command(["rm", "-rf", "build"], cwd=fp_bundlesdf_path) 
     run_command(["rm", "-rf", "*.egg-info"], cwd=fp_bundlesdf_path) 
@@ -149,7 +152,7 @@ def main():
     )
 
     # --- WiLoR Dependencies (Hand Extraction) ---
-    print("\n--- [8/9] Downloading WiLoR pretrained models ---")
+    print("\n--- [9/11] Downloading WiLoR pretrained models ---")
     wilor_models_dir = os.path.join(base_dir, "third_party/WiLoR/pretrained_models")
     os.makedirs(wilor_models_dir, exist_ok=True)
     download_file(
@@ -164,7 +167,7 @@ def main():
     # TODO: MANO params need to be downloaded after registering on certain website. This needs to be done manually.
 
     # --- Grasp Generation Checkpoints ---
-    print("\n--- [9/10] Downloading Grasp Generation checkpoints ---")
+    print("\n--- [10/11] Downloading Grasp Generation checkpoints ---")
     ckpt_dir = os.path.join(base_dir, "third_party/graspness_unofficial/ckpt")
     os.makedirs(ckpt_dir, exist_ok=True)
     download_with_gdown(
@@ -177,7 +180,7 @@ def main():
     )
 
     # --- SAM 3D Objects Checkpoints (requires HF auth) ---
-    print("\n--- [10/10] Downloading SAM 3D Objects checkpoints ---")
+    print("\n--- [11/11] Downloading SAM 3D Objects checkpoints ---")
     sam3d_ckpt_dir = os.path.join(base_dir, "third_party/sam-3d-objects/checkpoints/hf")
     download_sam3d_checkpoints(sam3d_ckpt_dir)
 
