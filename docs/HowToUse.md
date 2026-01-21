@@ -3,6 +3,7 @@
 Our framework contains several stages:
 - [Preprocess](../openreal2sim/preprocess/): collect or estimate depths and camera information from images and videos
 - [Reconstruction](../openreal2sim/reconstruction/): build physically interactable scenes from images and videos
+- [Motion](../openreal2sim/motion/): process trajectory and generate grasp poses
 - [Simulation](../openreal2sim/simulation/): import physical scenes into the simulator, collect robotic demonstrations
 
 ### Before We Start
@@ -26,7 +27,7 @@ We will use `openreal2sim:dev` image for the reconstruction and `isaaclab:dev` i
 
 Launch the docker container with mounted repository and data folder:
 ```
-HOST_UID=$(id -u) HOST_GID=$(id -g) docker compose -p "$USER" -f docker/compose.yml run -p 7860:7860 openreal2sim
+HOST_UID=$(id -u) HOST_GID=$(id -g) docker compose -p "$USER" -f docker/compose.yml run -p 8000:5000 openreal2sim
 ```
 
 **Note**: We have mounted several volumes so that checkpoints will be cached even if the container is removed. You can change the volume mappings by modifying the `docker/compose.yml` file.
@@ -116,6 +117,30 @@ We can check the mesh reconstruction quality at `outputs/{key_name}/simulation/s
   <img src="../assets/obj3.jpg" width="30%">
 </p>
 
+### Motion
+
+First, please run the motion processing pipeline.
+
+``python openreal2sim/motion/motion_manager.py``.
+
+
+We also provide a GUI for grasp pose annotation. Please follow the instructions on the interface to annotate the grasping pose for selected scene.
+
+
+![Grasp Annotation UI](../assets/GraspGUI.jpg)
+
+
+Please run `python openreal2sim/motion/tool/gripper_pose_editor.py`. This will open the 5000 port of the container and the 8000 port of the server.
+
+**How to use the GUI annotator:**
+
+1. Input `key_name` (e.g. `demo_video`) in the blank textbox and press `Load Scene` to load image frames
+
+2. Use the keyboard to move the gripper till a good pose.
+
+3. Roll Down the left bar and press `Save Current Pose`.
+
+4. You can press `Load Saved Grasps` to visualize all the saved grasps and delete them in the left bar if necessary.
 
 
 ### Robotic Simulation
@@ -150,31 +175,20 @@ and enter it:
 ```
 HOST_UID=$(id -u) HOST_GID=$(id -g) docker compose -p "$USER" -f docker/compose.yml exec isaaclab bash
 ```
+We now have a bash script for usd conversion, heuristic manipulation rollout and randomized generation.
 
-In the container, we need to convert the `glb` meshes to `usd` format. This is done by running the following script:
-```
-python openreal2sim/simulation/isaaclab/sim_preprocess/usd_conversion.py
-```
+Please run
+
+``bash simulation/isaaclab/demo/sim_agent.sh``
+
+If you want to specify the stage, please add ``--stage `` parameter, and choose among ``usd_conversion``, ``sim_heuristic_manip`` and ``sim_randomize_rollout``.
+
+The tunable params ares stored in ``simulation/isaaclab/demo/env/running_cfg.py``, please refer to that file for detailed instructions.
 
 **Note**: when running the above script for the first time, it may take quite a while to load IsaacSim. Just be patient.
 
 
-Then, we generate grasp proposals for each object in the scene:
-```
-python openreal2sim/simulation/isaaclab/sim_preprocess/grasp_generation.py
-```
-
-We can check the grasp proposals at `outputs/{key_name}/grasps/`.
-
-
-
-Next, we can import scenes in IsaacSim. 
-We provide a heuristic policy using grasping and motion planning:
-```
-python openreal2sim/simulation/isaaclab/sim_heuristic_manip.py
-```
-
-and you may observe something like this in the IsaacSim GUI:
+You may observe something like this in the IsaacSim GUI:
 
 <div style="text-align:center;">
   <video
@@ -191,7 +205,7 @@ and you may observe something like this in the IsaacSim GUI:
 
 <br><br>
 
-and you can find the visuo-motor trajectories at `outputs/{key_name}/demos/`.
+and you can find the visuo-motor trajectories at `outputs/{key_name}/demos/`, as well as `h5py/{key_name}/`.
 
 
 **Note**: The heuristic policy can be very un-stable, largely depending on the video object pose estimation quality. Please check the object pose estimation results at `outputs/{key_name}/reconstruction/objects/*.mp4`.
@@ -201,3 +215,5 @@ If the results are not good, a solution might be re-running the reconstruction s
 python openreal2sim/reconstruction/recon_agent.py --stage "scenario_fdpose_optimization"
 ```
 by tuning the `fdpose_est_refine_iter` and `fdpose_track_refine_iter` in `config/config.yaml`.
+
+You can also try selecting a new traj key. This requires going back to the motion stage and set the ``traj_key`` parameter in ``config.py``.
