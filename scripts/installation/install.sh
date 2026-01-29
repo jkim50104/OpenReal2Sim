@@ -1,3 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+JOBS="${MAX_JOBS:-8}"
+
 # mega-sam
 mkdir -p third_party/mega-sam/Depth-Anything/checkpoints
 wget -O third_party/mega-sam/Depth-Anything/checkpoints/depth_anything_vitl14.pth \
@@ -9,22 +14,22 @@ wget -O third_party/Grounded-SAM-2/checkpoints/sam2.1_hiera_large.pt \
   https://dl.fbaipublicfiles.com/segment_anything_2/092824/sam2.1_hiera_large.pt
 
 # segmentation cuda extension
-cd /app/third_party/Grounded-SAM-2 && \
+cd $REPO_ROOT/third_party/Grounded-SAM-2 && \
   python build_cuda.py build_ext --inplace -v && \
-  cd /app
+  cd $REPO_ROOT
 
 # foundation pose
-mkdir -p third_party/FoundationPose/weights
-gdown --folder 1DFezOAD0oD1BblsXVxqDsl8fj0qzB82i -O third_party/FoundationPose/weights
+mkdir -p $REPO_ROOT/third_party/FoundationPose/weights
+gdown --folder 1DFezOAD0oD1BblsXVxqDsl8fj0qzB82i -O $REPO_ROOT/third_party/FoundationPose/weights
 
 # foundation pose compile
-cd /app/third_party/FoundationPose/mycpp && \
+cd $REPO_ROOT/third_party/FoundationPose/mycpp && \
   rm -rf build && \
   mkdir -p build && cd build && \
-  cmake .. -DPYTHON_EXECUTABLE=$(which python) && make -j11 && \
-  cd /app
+  cmake .. -DPYTHON_EXECUTABLE=$(which python) && make -j"${JOBS}" && \
+  cd $REPO_ROOT
 
-cd /app/third_party/FoundationPose/bundlesdf/mycuda && \
+cd $REPO_ROOT/third_party/FoundationPose/bundlesdf/mycuda && \
   rm -rf build *egg* && \
   python -m pip install . --no-build-isolation && \
-  cd /app
+  cd $REPO_ROOT
