@@ -237,8 +237,8 @@ def demo_motion_process(keys, key_scene_dicts, key_cfgs):
         fd_traj_dict.pop(max_placement_oid)
         traj_key = 'fdpose_trajs_recomputed'
         if len(fd_traj_dict.keys()) > 0:
-            max_fd_distance = max(fd_traj_dict.values(), key=lambda x: x["fd_distance"])
-            max_fd_angle = max(fd_traj_dict.values(), key=lambda x: x["fd_angle"])
+            max_fd_distance = max(v["fd_distance"] for v in fd_traj_dict.values())
+            max_fd_angle    = max(v["fd_angle"] for v in fd_traj_dict.values())
         else:
             max_fd_distance = 0.0
             max_fd_angle = 0.0
