@@ -21,7 +21,7 @@ from wilor.models import load_wilor
 from wilor.utils import recursive_to
 from wilor.datasets.vitdet_dataset import ViTDetDataset    
 from sam2.build_sam import build_sam2
-from sam2.sam2_image_predictor import SAM2ImagePredictor    
+from sam2.sam2_image_predictor import SAM2ImagePredictor
 from ultralytics import YOLO
 
 class WiLoRExtractor:
@@ -32,7 +32,21 @@ class WiLoRExtractor:
                  device: str):
         self._wilor_model, self._wilor_cfg = load_wilor(model_path, cfg_path)
         self._wilor_model.eval()
-        self._yolo_detector = YOLO(yolo_weights_path)
+
+        # ---- PyTorch 2.6 fix: load Ultralytics checkpoint with weights_only=False (trusted weights only) ----
+        _orig_torch_load = torch.load
+
+        def _torch_load_compat(*args, **kwargs):
+            kwargs.setdefault("weights_only", False)
+            return _orig_torch_load(*args, **kwargs)
+
+        torch.load = _torch_load_compat
+        try:
+            self._yolo_detector = YOLO(str(yolo_weights_path))
+        finally:
+            torch.load = _orig_torch_load
+        # -----------------------------------------------------------------------------------------------
+
         self.device = torch.device(device)
       
     def process(self, images: np.ndarray, batch_size: int = 16, rescale_factor: float = 1.0):

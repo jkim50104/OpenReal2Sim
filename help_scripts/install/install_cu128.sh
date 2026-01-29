@@ -110,7 +110,9 @@ fi
 # xFormers (force source build for SM120)
 # ---------------------------
 export PIP_NO_BINARY="xformers"
-python -m pip install -v --no-build-isolation -U xformers==0.0.31.post1
+export SETUPTOOLS_SCM_PRETEND_VERSION="0.0.31.post1" #"0.0.31.post1" nystrom only supports up to 0.0.29 (UniDepth uses it)
+pip install -v --no-build-isolation \
+    git+https://github.com/facebookresearch/xformers.git@v${SETUPTOOLS_SCM_PRETEND_VERSION}#egg=xformers
 unset PIP_NO_BINARY
 
 # ---------------------------
@@ -222,3 +224,6 @@ else
   echo
   echo "⚠️  Skipping: $REPO_ROOT/scripts/installation/install.sh not found"
 fi
+
+# Install latest Unidepth due to xformers incompatability
+git clone https://github.com/lpiccinelli-eth/UniDepth.git

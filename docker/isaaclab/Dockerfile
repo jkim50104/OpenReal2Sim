@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.8.0-devel-ubuntu22.04
+FROM nvidia/cuda:12.8.1-devel-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -27,22 +27,22 @@ WORKDIR /app
 ENV TMPDIR=/tmp
 SHELL ["/bin/bash", "-lc"]
 
-ENV MAX_JOBS=2
-ENV MAKEFLAGS="-j2"
+ENV MAX_JOBS=64
+ENV MAKEFLAGS="-j64"
 ENV CMAKE_BUILD_PARALLEL_LEVEL=2
 
 ENV CUDA_HOME=/usr/local/cuda
 ENV FORCE_CUDA=1
 
 
-RUN pip install torch==2.7.0 torchvision==0.22.0 --index-url https://download.pytorch.org/whl/cu128
+RUN pip install torch==2.7.1 torchvision==0.22.1 --index-url https://download.pytorch.org/whl/cu128
 
 
 RUN sed -i 's|auto __raw = __to_address(__r.get())|auto __raw = std::__to_address(__r.get())|' \
     /usr/include/c++/11/bits/shared_ptr_base.h
 
 
-ENV TORCH_CUDA_ARCH_LIST="8.9+PTX"
+ENV TORCH_CUDA_ARCH_LIST="12.0"
 # curobo
 
 RUN mkdir -p /opt && \
@@ -59,9 +59,9 @@ RUN chmod -R 777 /usr/local/lib/python3.10/dist-packages/ \
 ENV TERM=xterm-256color
 RUN git clone https://github.com/PointsCoder/IsaacLab.git "/opt/IsaacLab" && \
     cd "/opt/IsaacLab" && \
-    sed -i 's|torch==2.5.1|torch==2.7.0|' source/isaaclab/setup.py && \
-    sed -i 's|torch==2.5.1|torch==2.7.0|' source/isaaclab_tasks/setup.py && \
-    sed -i 's|torch==2.5.1|torch==2.7.0|' source/isaaclab_rl/setup.py && \
+    sed -i 's|torch==2.5.1|torch==2.7.1|' source/isaaclab/setup.py && \
+    sed -i 's|torch==2.5.1|torch==2.7.1|' source/isaaclab_tasks/setup.py && \
+    sed -i 's|torch==2.5.1|torch==2.7.1|' source/isaaclab_rl/setup.py && \
     ./isaaclab.sh --install
 
 # usd conversion 
