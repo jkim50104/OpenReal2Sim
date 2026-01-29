@@ -4,6 +4,9 @@ outputs/
 .gradio/
 third_party/IsaacLab
 
+# 3D assets
+*.glb
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
